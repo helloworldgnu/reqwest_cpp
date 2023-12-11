@@ -376,6 +376,11 @@ Bytes::ptr Response::copy_to() {
   return std::make_shared<Bytes>(ptr,*len);
 }
 
+int32_t Response::read(uint8_t *buf, uint32_t buf_len) {
+    const int32_t count = ffi::response_read(this, buf, buf_len);
+    return count;
+}
+
 const HeaderMap* Response::headers(){
   const HeaderMap* hp = ffi::response_headers(this);
   return hp;

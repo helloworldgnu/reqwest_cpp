@@ -208,8 +208,29 @@ pub unsafe extern "C" fn response_copy_to(response: *mut Response)
         },
     }
 }
+//  int32_t read(uint8_t *buf, uint32_t buf_len);
+#[no_mangle]
+pub unsafe extern "C" fn response_read(response: *mut Response, buf: *mut u8, buf_len: u32) -> i32 {
+    if response.is_null() {
+        update_last_error(anyhow!("response is null when use copy"));
+        return -1;
+    }
 
-//TODO body mut api
+    use std::io::Read;
+
+    let resp = &mut *response;
+
+    let mut vec_buf = Vec::from_raw_parts(buf, buf_len as usize, buf_len as usize);
+    let result = resp.read(&mut vec_buf[..]);
+
+    std::mem::forget(vec_buf);
+
+    if let Some(count) = result.ok() {
+        count as i32
+    } else {
+        -2
+    }
+}
 
 
 #[no_mangle]

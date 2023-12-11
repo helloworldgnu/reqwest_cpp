@@ -1,2 +1,5 @@
 build/
 client/target/
+.vscode/
+.idea/
+CMakeLists.txt.user

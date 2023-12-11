@@ -544,6 +544,8 @@ struct Response {
   /// [`std::io::copy`]: https://doc.rust-lang.org/std/io/fn.copy.html
   Bytes::ptr copy_to();
 
+  int32_t read(uint8_t *buf, uint32_t buf_len);
+
   /// Get the `Headers` of this `Response`.
   const HeaderMap* headers();
 

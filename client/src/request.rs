@@ -113,12 +113,15 @@ pub unsafe extern "C" fn request_builder_body_string(
         update_last_error(anyhow!("request_builder is null when use body"));
         return ptr::null_mut();
     }
+
     let r_request_builder = Box::from_raw(request_builder);
     let r_str = match to_rust_str(str, "parse body string error") {
         Some(v) => v,
         None => { return ptr::null_mut(); }
     };
-    let res = r_request_builder.body(r_str);
+
+    let own_str = r_str.to_string();
+    let res = r_request_builder.body(own_str);
     Box::into_raw(Box::new(res))
 }
 

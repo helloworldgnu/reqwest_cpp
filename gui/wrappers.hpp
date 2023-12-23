@@ -116,7 +116,7 @@ struct HeaderMap {
 
   std::string values() const;
 
-  void destory() const;
+  void destroy() const;
 
 private:
   HeaderMap()=delete;
@@ -339,7 +339,7 @@ struct ClientBuilder {
   /// This method fails if TLS backend cannot be initialized, or the resolver
   /// cannot load the system configuration.
   Client* build();
-  void destory();
+  void destroy();
 private:
   ClientBuilder() = delete;
   ~ClientBuilder() = delete;
@@ -413,7 +413,7 @@ struct Client {
   /// This method fails if there was an error while sending request,
   /// or redirect limit was exhausted.
   Response* execute(Request *request);
-  void destory();
+  void destroy();
 private:
   Client() = delete;
   ~Client() = delete;
@@ -496,7 +496,7 @@ struct RequestBuilder {
   /// `Client::execute()`.
   Request* build();
 
-  void destory();
+  void destroy();
 private:
   RequestBuilder() = delete;
   ~RequestBuilder() = delete;
@@ -511,7 +511,7 @@ struct Response {
   /// and with malformed sequences replaced with the REPLACEMENT CHARACTER.
   /// Encoding is determined from the `charset` parameter of `Content-Type` header,
   /// and defaults to `utf-8` if not presented.
-  std::string text_and_destory();
+  std::string text_and_destroy();
 
   /// Get the response text given a specific encoding.
   ///
@@ -522,12 +522,12 @@ struct Response {
   /// about the possible encoding name, please go to [`encoding_rs`] docs.
   ///
   /// [`encoding_rs`]: https://docs.rs/encoding_rs/0.8/encoding_rs/#relationship-with-windows-code-pages
-  std::string text_with_charset_and_destory(
+  std::string text_with_charset_and_destroy(
       const std::string& default_encoding);
 
   /// Get the full response body as `Bytes`.
   /// The difference from copy_to is : This fun Consumption ownership
-  Bytes::ptr bytes_and_destory();
+  Bytes::ptr bytes_and_destroy();
 
   /// todo extensions.
   /// Get the content-length of the response, if it is known.
@@ -568,7 +568,7 @@ struct Response {
   ///_ => "unreachable"
   std::string version();
 
-  void destory();
+  void destroy();
 private:
   Response() = delete;
   ~Response() = delete;
@@ -579,7 +579,7 @@ namespace  proxy {
   Proxy* http(const std::string& proxy_scheme);
   Proxy* https(const std::string& proxy_scheme);
   Proxy* all(const std::string& proxy_scheme);
-  void destory(Proxy* p);
+  void destroy(Proxy* p);
 };
 
 }

@@ -223,8 +223,8 @@ Client* ClientBuilder::build() {
   RETURN_SELF_NULL_THROW(client_builder_build_client(this))
 }
 
-void ClientBuilder::destory() {
-  client_builder_destory(this);
+void ClientBuilder::destroy() {
+  client_builder_destroy(this);
 }
 
 RequestBuilder* Client::get(const std::string& url){
@@ -259,8 +259,8 @@ Response* Client::execute(Request *request){
   RETURN_SELF_NULL_THROW(ffi::client_execute(this,request))
 }
 
-void Client::destory(){
-  ffi::client_destory(this);
+void Client::destroy(){
+  ffi::client_destroy(this);
 }
 
 RequestBuilder* RequestBuilder::basic_auth(
@@ -333,24 +333,24 @@ RequestBuilder* RequestBuilder::version(const std::string& version){
   RETURN_SELF_NULL_THROW(ffi::request_builder_version(this,version.c_str()))
 }
 
-void RequestBuilder::destory() {
-  ffi::request_builder_destory(this);
+void RequestBuilder::destroy() {
+  ffi::request_builder_destroy(this);
 }
 
-void Response::destory() {
-  ffi::response_destory(this);
+void Response::destroy() {
+  ffi::response_destroy(this);
 }
 
-std::string Response::text_and_destory(){
+std::string Response::text_and_destroy(){
   RETURN_STRING_AND_FREE(ffi::response_text(this))
 }
 
-std::string Response::text_with_charset_and_destory(
+std::string Response::text_with_charset_and_destroy(
     const std::string& default_encoding){
   RETURN_STRING_AND_FREE(ffi::response_text_with_charset(this,default_encoding.c_str()))
 }
 
-Bytes::ptr Response::bytes_and_destory() {
+Bytes::ptr Response::bytes_and_destroy() {
   const uint64_t * len = ffi::response_content_length(this);
   if(!len){
     throw WrapperException::Last_error();
@@ -465,8 +465,8 @@ void HeaderMap::reserve(uintptr_t additional){
   return ffi::header_map_reserve(this, additional);
 }
 
-void HeaderMap::destory() const{
-  ffi::header_map_destory(this);
+void HeaderMap::destroy() const{
+  ffi::header_map_destroy(this);
 }
 
 Proxy* proxy::http(const std::string& proxy_scheme){
@@ -479,8 +479,8 @@ Proxy* proxy::all(const std::string& proxy_scheme){
   RETURN_SELF_NULL_THROW(proxy_reqwest_all(proxy_scheme.c_str()));
 }
 
-void proxy::destory(Proxy *p) {
-  proxy_reqwest_destory(p);
+void proxy::destroy(Proxy *p) {
+  proxy_reqwest_destroy(p);
 }
 
 }

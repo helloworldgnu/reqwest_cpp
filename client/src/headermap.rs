@@ -10,6 +10,7 @@ use crate::ffi::*;
 pub unsafe extern "C" fn new_header_map() -> *mut HeaderMap {
     Box::into_raw(Box::new(HeaderMap::new()))
 }
+
 /// Inserts a key-value pair into the map.
 ///
 /// If the map did not previously have this key present, then `None` is
@@ -26,21 +27,22 @@ pub unsafe extern "C" fn new_header_map() -> *mut HeaderMap {
 /// without being identical.
 #[no_mangle]
 pub unsafe extern "C" fn header_map_insert(
-        header_map: *mut HeaderMap,
-        key: *const c_char,
-        value: *const c_char,
-        )-> bool{
-    if header_map.is_null(){
+    header_map: *mut HeaderMap,
+    key: *const c_char,
+    value: *const c_char,
+) -> bool {
+    if header_map.is_null() {
         update_last_error(anyhow!("header_map is null"));
         return false;
     }
-    let r_key = match to_rust_str(key, "parse key error"){
+
+    let r_key = match to_rust_str(key, "parse key error") {
         Some(v) => v,
-        None => {return false;}
+        None => { return false; }
     };
     let r_value = match to_rust_str(value, "parse value error") {
         Some(v) => v,
-        None => {return false;}
+        None => { return false; }
     };
     match (&mut *header_map).insert(r_key, r_value.parse().unwrap()) {
         Some(_) => true,
@@ -59,21 +61,22 @@ pub unsafe extern "C" fn header_map_insert(
 /// identical.
 #[no_mangle]
 pub unsafe extern "C" fn header_map_append(
-        header_map: *mut HeaderMap,
-        key: *const c_char,
-        value: *const c_char,
-        )-> bool{
-    if header_map.is_null(){
+    header_map: *mut HeaderMap,
+    key: *const c_char,
+    value: *const c_char,
+) -> bool {
+    if header_map.is_null() {
         update_last_error(anyhow!("header_map is null"));
         return false;
     }
-    let r_key = match to_rust_str(key, "parse key error"){
+
+    let r_key = match to_rust_str(key, "parse key error") {
         Some(v) => v,
-        None => {return false;}
+        None => { return false; }
     };
     let r_value = match to_rust_str(value, "parse value error") {
         Some(v) => v,
-        None => {return false;}
+        None => { return false; }
     };
     (&mut *header_map).append(r_key, r_value.parse().unwrap())
 }
@@ -86,16 +89,17 @@ pub unsafe extern "C" fn header_map_append(
 /// values.
 #[no_mangle]
 pub unsafe extern "C" fn header_map_remove(
-        header_map: *mut HeaderMap,
-        key: *const c_char,
-        )-> bool{
-    if header_map.is_null(){
+    header_map: *mut HeaderMap,
+    key: *const c_char,
+) -> bool {
+    if header_map.is_null() {
         update_last_error(anyhow!("header_map is null"));
         return false;
     }
-    let r_key = match to_rust_str(key, "parse key error"){
+
+    let r_key = match to_rust_str(key, "parse key error") {
         Some(v) => v,
-        None => {return false;}
+        None => { return false; }
     };
     (&mut *header_map).remove(r_key);
     true
@@ -104,22 +108,23 @@ pub unsafe extern "C" fn header_map_remove(
 ///Don't forget free
 #[no_mangle]
 pub unsafe extern "C" fn header_map_get(
-        header_map: *const HeaderMap,
-        key: *const c_char,
-        )-> *const c_char {
-    if header_map.is_null(){
+    header_map: *const HeaderMap,
+    key: *const c_char,
+) -> *const c_char {
+    if header_map.is_null() {
         update_last_error(anyhow!("header_map is null"));
         return ptr::null();
     }
-    let r_key = match to_rust_str(key, "parse key error"){
+
+    let r_key = match to_rust_str(key, "parse key error") {
         Some(v) => v,
-        None => {return ptr::null();}
+        None => { return ptr::null(); }
     };
     let r_value: Option<&HeaderValue> = (*header_map).get(r_key);
 
-    match r_value{
+    match r_value {
         Some(v) => {
-            let str = match v.to_str(){
+            let str = match v.to_str() {
                 Ok(v) => v,
                 Err(e) => {
                     update_last_error(Error::new(e));
@@ -127,7 +132,7 @@ pub unsafe extern "C" fn header_map_get(
                 }
             };
             CString::new(str).unwrap().into_raw()
-        },
+        }
         None => { return ptr::null(); }
     }
 }
@@ -139,9 +144,9 @@ pub unsafe extern "C" fn header_map_get(
 /// stored given that a single key may have more than one associated value.
 #[no_mangle]
 pub unsafe extern "C" fn header_map_len(
-        header_map: *const HeaderMap,
-        )-> usize{
-    if header_map.is_null(){
+    header_map: *const HeaderMap,
+) -> usize {
+    if header_map.is_null() {
         update_last_error(anyhow!("header_map is null"));
         return usize::MAX;
     }
@@ -155,12 +160,13 @@ pub unsafe extern "C" fn header_map_len(
 ///
 #[no_mangle]
 pub unsafe extern "C" fn header_map_keys_len(
-        header_map: *const HeaderMap,
-        )-> usize{
-    if header_map.is_null(){
+    header_map: *const HeaderMap,
+) -> usize {
+    if header_map.is_null() {
         update_last_error(anyhow!("header_map is null"));
         return usize::MAX;
     }
+
     (*header_map).keys_len()
 }
 
@@ -168,26 +174,28 @@ pub unsafe extern "C" fn header_map_keys_len(
 /// for reuse.
 #[no_mangle]
 pub unsafe extern "C" fn header_map_clear(
-        header_map: *mut HeaderMap,
-        ){
-    if header_map.is_null(){
+    header_map: *mut HeaderMap,
+) {
+    if header_map.is_null() {
         update_last_error(anyhow!("header_map is null"));
-    }else {
+    } else {
         (*header_map).clear()
     }
 }
+
 /// Returns the number of headers the map can hold without reallocating.
 ///
 /// This number is an approximation as certain usage patterns could cause
 /// additional allocations before the returned capacity is filled.
 #[no_mangle]
 pub unsafe extern "C" fn header_map_capacity(
-        header_map: *const HeaderMap,
-        )-> usize{
-    if header_map.is_null(){
+    header_map: *const HeaderMap,
+) -> usize {
+    if header_map.is_null() {
         update_last_error(anyhow!("header_map is null"));
         return usize::MAX;
     }
+
     (*header_map).capacity()
 }
 
@@ -201,12 +209,12 @@ pub unsafe extern "C" fn header_map_capacity(
 /// reached.
 #[no_mangle]
 pub unsafe extern "C" fn header_map_reserve(
-        header_map: *mut HeaderMap,
-        additional: usize
-        ){
-    if header_map.is_null(){
+    header_map: *mut HeaderMap,
+    additional: usize,
+) {
+    if header_map.is_null() {
         update_last_error(anyhow!("header_map is null"));
-    }else {
+    } else {
         (*header_map).reserve(additional)
     }
 }
@@ -218,19 +226,20 @@ pub unsafe extern "C" fn header_map_reserve(
 /// Returns `None` if there are no values associated with the key.
 #[no_mangle]
 pub unsafe extern "C" fn header_map_get_all(
-        header_map: *const HeaderMap,
-        key: *const c_char,
-        )-> *const c_char {
-    if header_map.is_null(){
+    header_map: *const HeaderMap,
+    key: *const c_char,
+) -> *const c_char {
+    if header_map.is_null() {
         update_last_error(anyhow!("header_map is null"));
         return ptr::null();
     }
-    let r_key = match to_rust_str(key, "parse key error"){
+
+    let r_key = match to_rust_str(key, "parse key error") {
         Some(v) => v,
-        None => {return ptr::null();}
+        None => { return ptr::null(); }
     };
     let r_value: Vec<&HeaderValue> = (*header_map).get_all(r_key).iter().collect();
-    CString::new(format!("{:?}",r_value)).unwrap().into_raw()
+    CString::new(format!("{:?}", r_value)).unwrap().into_raw()
 }
 
 /// Returns true if the map contains a value for the specified key.
@@ -239,17 +248,18 @@ pub unsafe extern "C" fn header_map_get_all(
 /// If only return false,can't show function failed or isn't contains.
 #[no_mangle]
 pub unsafe extern "C" fn header_map_contains_key(
-        header_map: *const HeaderMap,
-        key: *const c_char,
-        bk: *mut bool
-        )-> i32{
-    if header_map.is_null() || bk.is_null(){
+    header_map: *const HeaderMap,
+    key: *const c_char,
+    bk: *mut bool,
+) -> i32 {
+    if header_map.is_null() || bk.is_null() {
         update_last_error(anyhow!("header_map is null"));
         return -1;
     }
-    let r_key = match to_rust_str(key, "parse key error"){
+
+    let r_key = match to_rust_str(key, "parse key error") {
         Some(v) => v,
-        None => {return -1;}
+        None => { return -1; }
     };
     *bk = (*header_map).contains_key(r_key);
     0
@@ -258,45 +268,44 @@ pub unsafe extern "C" fn header_map_contains_key(
 //TODO get keys array-string
 #[no_mangle]
 pub unsafe extern "C" fn header_map_keys(
-        header_map: *const HeaderMap,
-        )-> *const c_char {
-    if header_map.is_null(){
+    header_map: *const HeaderMap,
+) -> *const c_char {
+    if header_map.is_null() {
         update_last_error(anyhow!("header_map is null"));
         return ptr::null();
     }
+
     let r_value: Vec<&str> = (*header_map)
         .keys()
         .into_iter()
-        .map(|v| v.as_str() )
+        .map(|v| v.as_str())
         .collect();
-    CString::new(format!("{:?}",r_value)).unwrap().into_raw()
+    CString::new(format!("{:?}", r_value)).unwrap().into_raw()
 }
 
 //TODO get values array-string
 #[no_mangle]
 pub unsafe extern "C" fn header_map_values(
-        header_map: *const HeaderMap,
-        )-> *const c_char {
-    if header_map.is_null(){
+    header_map: *const HeaderMap,
+) -> *const c_char {
+    if header_map.is_null() {
         update_last_error(anyhow!("header_map is null"));
         return ptr::null();
     }
+
     let r_value: Vec<&str> = (*header_map)
         .values()
         .into_iter()
-        .map(|v| match v.to_str() {
-            Ok(s) => s,
-            Err(_) => "opaque"
-        })
+        .map(|v| v.to_str().unwrap_or_else(|_| "opaque"))
         .collect();
 
-    CString::new(format!("{:?}",r_value)).unwrap().into_raw()
+    CString::new(format!("{:?}", r_value)).unwrap().into_raw()
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn header_map_destory(header_map: *const HeaderMap){
-    if header_map.is_null(){
-        return ;
+pub unsafe extern "C" fn header_map_destroy(header_map: *const HeaderMap) {
+    if header_map.is_null() {
+        return;
     }
     drop(Box::from_raw(header_map as *mut HeaderMap))
 }

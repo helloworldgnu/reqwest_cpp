@@ -4,7 +4,7 @@
 use std::ffi::{CString, CStr};
 use std::{ptr, slice, usize, time::Duration};
 use anyhow::{Error, anyhow};
-use libc::{c_char, c_int };
+use libc::{c_char, c_int};
 use std::cell::RefCell;
 use std::convert::From;
 
@@ -15,28 +15,28 @@ thread_local! {
 
 #[repr(C)]
 //#[derive(Clone)]
-pub struct Pair{
+pub struct Pair {
     key: *const c_char,
     value: *const c_char,
 }
 
-impl From<(String, String)> for Pair{
+impl From<(String, String)> for Pair {
     fn from(tup: (String, String)) -> Self {
         Pair {
             key: match CString::new(tup.0) {
                 Ok(v) => v.into_raw(),
                 Err(_) => ptr::null(),
             },
-            value: match CString::new(tup.1){
+            value: match CString::new(tup.1) {
                 Ok(v) => v.into_raw(),
                 Err(_) => ptr::null_mut(),
-            }
+            },
         }
     }
 }
 
-impl From<&Pair> for (String,String) {
-    fn from(tup: &Pair) -> (String,String) {
+impl From<&Pair> for (String, String) {
+    fn from(tup: &Pair) -> (String, String) {
         let key = match to_rust_str(tup.key, "key pasre error") {
             Some(v) => v.to_string(),
             None => String::from(""),
@@ -53,15 +53,16 @@ impl From<&Pair> for (String,String) {
 pub fn update_last_error(err: Error) {
     error!("Setting LAST_ERROR: {}",err);
     println!("update_last_error : {}", err);
-     {
-         // Print a pseudo-backtrace for this error, following back each error's
-         // cause until we reach the root error.
-         let mut cause = err.source();
-         while let Some(parent_err) = cause {
-             warn!("Caused by: {}", parent_err);
-             cause = parent_err.source();
-         }
-     }
+
+    {
+        // Print a pseudo-backtrace for this error, following back each error's
+        // cause until we reach the root error.
+        let mut cause = err.source();
+        while let Some(parent_err) = cause {
+            warn!("Caused by: {}", parent_err);
+            cause = parent_err.source();
+        }
+    }
 
     LAST_ERROR.with(|prev| {
         *prev.borrow_mut() = Some(Box::new(err));
@@ -78,9 +79,9 @@ pub fn take_last_error() -> Option<Box<Error>> {
 #[no_mangle]
 pub extern "C" fn last_error_length() -> c_int {
     LAST_ERROR.with(|prev| match *prev.borrow() {
-        Some(ref err) => err.to_string().len() as c_int +1,
+        Some(ref err) => err.to_string().len() as c_int + 1,
         None => 0,
-})
+    })
 }
 
 /// Write the most recent error message into a caller-provided buffer as a UTF-8
@@ -117,10 +118,10 @@ pub unsafe extern "C" fn last_error_message(buffer: *mut c_char, length: c_int) 
     }
 
     ptr::copy_nonoverlapping(
-            error_message.as_ptr(),
-            buffer.as_mut_ptr(),
-            error_message.len(),
-            );
+        error_message.as_ptr(),
+        buffer.as_mut_ptr(),
+        error_message.len(),
+    );
 
     // Add a trailing null so people using the string as a `char *` don't
     // accidentally read into garbage.
@@ -130,27 +131,30 @@ pub unsafe extern "C" fn last_error_message(buffer: *mut c_char, length: c_int) 
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn free_string(s: *const c_char){
+pub unsafe extern "C" fn free_string(s: *const c_char) {
     if s.is_null() {
         update_last_error(anyhow!("string is null"));
         return;
     }
+
     drop(CString::from_raw(s as *mut _));
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn free_vec_u8(s: *const u8, len: usize){
+pub unsafe extern "C" fn free_vec_u8(s: *const u8, len: usize) {
     if s.is_null() {
         update_last_error(anyhow!("u8 ptr is null"));
         return;
     }
-    drop(Vec::from_raw_parts(s as *mut u8,len,len));
+
+    drop(Vec::from_raw_parts(s as *mut u8, len, len));
 }
 
-pub fn to_rust_str<'a>(ptr: *const c_char,err_tip :&'static str) -> Option<&'a str>{
+pub fn to_rust_str<'a>(ptr: *const c_char, err_tip: &'static str) -> Option<&'a str> {
     if ptr.is_null() {
         return None;
     }
+
     unsafe {
         match CStr::from_ptr(ptr).to_str() {
             Ok(v) => Some(v),
@@ -163,11 +167,12 @@ pub fn to_rust_str<'a>(ptr: *const c_char,err_tip :&'static str) -> Option<&'a s
 }
 
 
-pub fn u64_to_millos_duration(millisecond :*const u64) -> Option<Duration> {
+pub fn u64_to_millos_duration(millisecond: *const u64) -> Option<Duration> {
     if millisecond.is_null() {
         return None;
     }
-    unsafe{
+
+    unsafe {
         Some(Duration::from_millis(*millisecond))
     }
 }

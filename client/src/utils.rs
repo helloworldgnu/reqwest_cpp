@@ -9,11 +9,10 @@ use chrono::Local;
 /// times as you want and logging will only be initialized the first time.
 #[no_mangle]
 pub extern "C" fn initialize_logging() {
-    static INITIALIZE : Once = Once::new();
-    INITIALIZE.call_once ( || {
+    static INITIALIZE: Once = Once::new();
+    INITIALIZE.call_once(|| {
         fern::Dispatch::new()
             .format(|out, message, record| {
-
                 out.finish(format_args!(
                     "{} {:7} ({:?}#{:?}): {}{}",
                     Local::now().format("[%Y-%m-%d][%H:%M:%S]"),
@@ -22,7 +21,7 @@ pub extern "C" fn initialize_logging() {
                     record.line(),
                     message,
                     if cfg!(windows) { "\r" } else { "" }
-                    ))
+                ))
             })
             .level(LevelFilter::Debug)
             .chain(fern::log_file("rest_client.log").unwrap())

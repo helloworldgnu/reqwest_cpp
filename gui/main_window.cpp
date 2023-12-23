@@ -42,10 +42,10 @@ void MainWindow::test_full() {
       std::cout << headermap2->get("content-type") << std::endl;
       std::cout << headermap2->keys() << std::endl;
       std::cout << headermap2->values() << std::endl;
-//      std::string body = resp->text_and_destory();
+//      std::string body = resp->text_and_destroy();
 //      std::cout << body << std::endl;
-      headermap2->destory();
-      ffi::Bytes::ptr b = resp->bytes_and_destory();
+      headermap2->destroy();
+      ffi::Bytes::ptr b = resp->bytes_and_destroy();
     }catch (const ffi::WrapperException& e){
       std::cout << e.what() << std::endl;
     }

@@ -8,6 +8,10 @@ use anyhow::{Error, anyhow};
 
 use crate::ffi::*;
 
+#[no_mangle]
+#[used]
+pub static mut HTTP_READ_TIMEOUT: i32 = -1000;
+
 /// Get the response text.
 ///
 /// This method decodes the response body with BOM sniffing
@@ -238,7 +242,7 @@ pub unsafe extern "C" fn response_read(response: *mut Response, buf: *mut u8, bu
     if let Some(count) = result.ok() {
         count as i32
     } else {
-        -2
+        HTTP_READ_TIMEOUT
     }
 }
 

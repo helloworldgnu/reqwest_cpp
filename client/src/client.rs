@@ -134,6 +134,28 @@ pub unsafe extern "C" fn client_builder_timeout(
     Box::into_raw(Box::new(result))
 }
 
+// Connect Timeout options
+
+/// Set a timeout for connect operations of a `Client`.
+///
+/// Default is 30 seconds.
+///
+/// Pass `None` to disable timeout.
+#[no_mangle]
+pub unsafe extern "C" fn client_builder_connect_timeout(
+    client_builder: *mut ClientBuilder,
+    millisecond: *const u64,
+) -> *mut ClientBuilder {
+    if client_builder.is_null() {
+        update_last_error(anyhow!("client_builder is null when use timeout"));
+        return ptr::null_mut();
+    }
+
+    let r_client_builder = Box::from_raw(client_builder);
+    let result = r_client_builder.connect_timeout(u64_to_millos_duration(millisecond));
+    Box::into_raw(Box::new(result))
+}
+
 // HTTP options
 
 /// Set an optional timeout for idle sockets being kept-alive.

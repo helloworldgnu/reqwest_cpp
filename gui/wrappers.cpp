@@ -203,6 +203,14 @@ ClientBuilder* ClientBuilder::timeout(const uint64_t millisecond){
   RETURN_SELF_NULL_THROW(ffi::client_builder_timeout(this,&millisecond))
 }
 
+ClientBuilder* ClientBuilder::connect_timeout(const uint64_t* millisecond){
+  RETURN_SELF_NULL_THROW(ffi::client_builder_connect_timeout(this, millisecond))
+}
+
+ClientBuilder* ClientBuilder::connect_timeout(const uint64_t millisecond){
+  RETURN_SELF_NULL_THROW(ffi::client_builder_connect_timeout(this, &millisecond))
+}
+
 ClientBuilder* ClientBuilder::tls_built_in_root_certs(bool tls_built_in_root_certs){
   RETURN_SELF_NULL_THROW(ffi::client_builder_tls_built_in_root_certs(this,tls_built_in_root_certs))
 }

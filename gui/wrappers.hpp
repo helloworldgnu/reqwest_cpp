@@ -314,6 +314,14 @@ struct ClientBuilder {
   ClientBuilder* timeout(const uint64_t *millisecond = nullptr);
   ClientBuilder* timeout(const uint64_t millisecond);
 
+  /// Set a timeout for connect operations of a `Client`.
+  ///
+  /// Default is 30 seconds.
+  ///
+  /// Pass `None` to disable timeout.
+  ClientBuilder* connect_timeout(const uint64_t *millisecond = nullptr);
+  ClientBuilder* connect_timeout(const uint64_t millisecond);
+
   /// Controls the use of built-in system certificates during certificate validation.
   ///
   /// Defaults to `true` -- built-in system certs will be used.

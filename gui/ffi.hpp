@@ -10,8 +10,5 @@ struct Response;
 struct HeaderMap;
 struct Proxy;
 struct Proxy;
-struct Pair {
-  const char *key;
-  const char *value;
-};
+struct Pair;
 }

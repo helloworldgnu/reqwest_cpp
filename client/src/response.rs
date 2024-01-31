@@ -132,6 +132,15 @@ pub unsafe extern "C" fn response_content_length(response: *mut Response)
     Box::into_raw(Box::new(res))
 }
 
+#[no_mangle]
+pub unsafe extern "C" fn response_content_length_destroy(content_length: *mut u64) {
+    if content_length.is_null() {
+        return;
+    }
+    drop(Box::from_raw(content_length))
+}
+
+
 /// Get the full response body as `Bytes`.
 /// The difference from copy_to is : This fun Consumption ownership
 /// Don't forget free

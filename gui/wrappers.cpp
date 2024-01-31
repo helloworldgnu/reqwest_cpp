@@ -363,8 +363,14 @@ Bytes::ptr Response::bytes_and_destroy() {
   if(!len){
     throw WrapperException::Last_error();
   }
+  
+  const uint64_t length = *len;
+  response_content_length_destroy(const_cast<uint64_t*>(len));
+
   const uint8_t * ptr = ffi::response_bytes(this);
-  return std::make_shared<Bytes>(ptr,*len);
+  std::shared_ptr<Bytes> bytes = std::make_shared<Bytes>(ptr, length);
+
+  return bytes;
 }
 
 uint64_t Response::content_length(){
@@ -372,7 +378,10 @@ uint64_t Response::content_length(){
   if(!len){
     throw WrapperException::Last_error();
   }
-  return *len;
+
+  const uint64_t length = *len;
+  response_content_length_destroy(const_cast<uint64_t*>(len));
+  return length;
 }
 
 Bytes::ptr Response::copy_to() {
@@ -380,8 +389,14 @@ Bytes::ptr Response::copy_to() {
   if(!len){
     throw WrapperException::Last_error();
   }
+
+  const uint64_t length = *len;
+  response_content_length_destroy(const_cast<uint64_t*>(len));
+
   const uint8_t * ptr = ffi::response_copy_to(this);
-  return std::make_shared<Bytes>(ptr,*len);
+  std::shared_ptr<Bytes> bytes = std::make_shared<Bytes>(ptr, length);
+
+  return bytes;
 }
 
 int32_t Response::read(uint8_t *buf, uint32_t buf_len) {

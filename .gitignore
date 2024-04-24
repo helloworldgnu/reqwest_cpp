@@ -3,3 +3,4 @@ client/target/
 .vscode/
 .idea/
 CMakeLists.txt.user
+.DS_Store

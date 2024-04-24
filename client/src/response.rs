@@ -248,11 +248,18 @@ pub unsafe extern "C" fn response_read(response: *mut Response, buf: *mut u8, bu
 
     std::mem::forget(vec_buf);
 
-    if let Some(count) = result.ok() {
-        count as i32
-    } else {
-        HTTP_READ_TIMEOUT
-    }
+    let code = match result {
+        Ok(count) => count as i32,
+        Err(e) => match e.kind() {
+            std::io::ErrorKind::TimedOut => HTTP_READ_TIMEOUT,
+            _ => {
+                update_last_error(anyhow!(e));
+                -1
+            }
+        },
+    };
+
+    code
 }
 
 #[no_mangle]

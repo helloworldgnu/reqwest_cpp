@@ -3,14 +3,13 @@ extern crate fern;
 extern crate libc;
 #[macro_use]
 extern crate log;
-pub extern crate reqwest;
 extern crate anyhow;
+pub extern crate reqwest;
 
+mod client;
 pub mod ffi;
+mod headermap;
+mod proxy;
 mod request;
 mod response;
-mod client;
-mod headermap;
 mod utils;
-mod proxy;
-

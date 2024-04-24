@@ -1,7 +1,7 @@
-use std::sync::Once;
+use chrono::Local;
 use fern;
 use log::LevelFilter;
-use chrono::Local;
+use std::sync::Once;
 
 /// Initialize the global logger and log to `rest_client.log`.
 ///

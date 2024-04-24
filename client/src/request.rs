@@ -1,8 +1,8 @@
 //use cookie::CookieJar;
-use reqwest::blocking::{Request, Response, RequestBuilder};
-use reqwest::header::HeaderMap;
+use anyhow::{anyhow, Error};
 use libc::c_char;
-use anyhow::{Error, anyhow};
+use reqwest::blocking::{Request, RequestBuilder, Response};
+use reqwest::header::HeaderMap;
 use std::{ptr, slice, time::Duration};
 
 use crate::ffi::*;
@@ -21,11 +21,15 @@ pub unsafe extern "C" fn request_builder_header(
 
     let r_key = match to_rust_str(key, "parse key error") {
         Some(v) => v,
-        None => { return ptr::null_mut(); }
+        None => {
+            return ptr::null_mut();
+        }
     };
     let r_value = match to_rust_str(value, "parse value error") {
         Some(v) => v,
-        None => { return ptr::null_mut(); }
+        None => {
+            return ptr::null_mut();
+        }
     };
 
     let r_request_builder = Box::from_raw(request_builder);
@@ -40,7 +44,9 @@ pub unsafe extern "C" fn request_builder_headers(
     headers: *mut HeaderMap,
 ) -> *mut RequestBuilder {
     if request_builder.is_null() || headers.is_null() {
-        update_last_error(anyhow!("request_builder or heanders is null when use headers"));
+        update_last_error(anyhow!(
+            "request_builder or heanders is null when use headers"
+        ));
         return ptr::null_mut();
     }
 
@@ -63,7 +69,9 @@ pub unsafe extern "C" fn request_builder_basic_auth(
 
     let r_username = match to_rust_str(username, "parse username error") {
         Some(v) => v,
-        None => { return ptr::null_mut(); }
+        None => {
+            return ptr::null_mut();
+        }
     };
 
     let r_password = to_rust_str(password, "parse username error");
@@ -85,7 +93,9 @@ pub unsafe extern "C" fn request_builder_bearer_auth(
 
     let r_token = match to_rust_str(token, "pasre token error") {
         Some(v) => v,
-        None => { return ptr::null_mut(); }
+        None => {
+            return ptr::null_mut();
+        }
     };
     let r_request_builder = Box::from_raw(request_builder);
     let res = r_request_builder.bearer_auth(r_token);
@@ -124,7 +134,9 @@ pub unsafe extern "C" fn request_builder_body_string(
     let r_request_builder = Box::from_raw(request_builder);
     let r_str = match to_rust_str(str, "parse body string error") {
         Some(v) => v,
-        None => { return ptr::null_mut(); }
+        None => {
+            return ptr::null_mut();
+        }
     };
 
     let own_str = r_str.to_string();
@@ -146,7 +158,9 @@ pub unsafe extern "C" fn request_builder_body_file(
     let r_request_builder = Box::from_raw(request_builder);
     let r_file_path = match to_rust_str(file_path, "parse body string error") {
         Some(v) => v,
-        None => { return ptr::null_mut(); }
+        None => {
+            return ptr::null_mut();
+        }
     };
     let file = match std::fs::File::open(r_file_path) {
         Ok(f) => f,
@@ -201,10 +215,7 @@ pub unsafe extern "C" fn request_builder_query(
 
     let r_request_builder = Box::from_raw(request_builder);
     let c_query: &[Pair] = slice::from_raw_parts(querys, len);
-    let r_query: Vec<(String, String)> = c_query
-        .iter()
-        .map(|f| f.into())
-        .collect();
+    let r_query: Vec<(String, String)> = c_query.iter().map(|f| f.into()).collect();
 
     let res = r_request_builder.query(&r_query);
     Box::into_raw(Box::new(res))
@@ -218,7 +229,9 @@ pub unsafe extern "C" fn request_builder_version(
 ) -> *mut RequestBuilder {
     //TODO 第一个判断应该都是this指针是否为空，接着马上获取所有权，保证c++ throw错误后没有释放对象
     if request_builder.is_null() {
-        update_last_error(anyhow!("client builder or version is null when use min_tls_version"));
+        update_last_error(anyhow!(
+            "client builder or version is null when use min_tls_version"
+        ));
         return ptr::null_mut();
     }
 
@@ -229,7 +242,9 @@ pub unsafe extern "C" fn request_builder_version(
         Some("1.1") => reqwest::Version::HTTP_11,
         Some("2") => reqwest::Version::HTTP_2,
         Some("3") => reqwest::Version::HTTP_3,
-        _ => { return ptr::null_mut(); }
+        _ => {
+            return ptr::null_mut();
+        }
     };
 
     let res = r_request_builder.version(r_version);
@@ -254,15 +269,11 @@ pub unsafe extern "C" fn request_builder_form(
 
     let r_request_builder = Box::from_raw(request_builder);
     let c_query: &[Pair] = slice::from_raw_parts(pairs, len);
-    let r_query: Vec<(String, String)> = c_query
-        .iter()
-        .map(|f| f.into())
-        .collect();
+    let r_query: Vec<(String, String)> = c_query.iter().map(|f| f.into()).collect();
 
     let res = r_request_builder.form(&r_query);
     Box::into_raw(Box::new(res))
 }
-
 
 /// Send a JSON body.
 ///
@@ -281,10 +292,7 @@ pub unsafe extern "C" fn request_builder_json(
 
     let r_request_builder = Box::from_raw(request_builder);
     let c_query: &[Pair] = slice::from_raw_parts(pairs, len);
-    let r_query: Vec<(String, String)> = c_query
-        .iter()
-        .map(|f| f.into())
-        .collect();
+    let r_query: Vec<(String, String)> = c_query.iter().map(|f| f.into()).collect();
 
     let res = r_request_builder.json(&r_query);
     Box::into_raw(Box::new(res))
@@ -295,8 +303,9 @@ pub unsafe extern "C" fn request_builder_json(
 /// Build a `Request`, which can be inspected, modified and executed with
 /// `Client::execute()`.
 #[no_mangle]
-pub unsafe extern "C" fn request_builder_build(request_builder: *mut RequestBuilder)
-                                               -> *mut Request {
+pub unsafe extern "C" fn request_builder_build(
+    request_builder: *mut RequestBuilder,
+) -> *mut Request {
     if request_builder.is_null() {
         update_last_error(anyhow!("request_builder is null when use build"));
         return ptr::null_mut();
@@ -341,8 +350,9 @@ pub unsafe extern "C" fn request_builder_send(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn request_builder_try_clone(request_builder: *mut RequestBuilder)
-                                                   -> *mut RequestBuilder {
+pub unsafe extern "C" fn request_builder_try_clone(
+    request_builder: *mut RequestBuilder,
+) -> *mut RequestBuilder {
     if request_builder.is_null() {
         update_last_error(anyhow!("request_builder is null when use send"));
         return ptr::null_mut();
@@ -350,7 +360,7 @@ pub unsafe extern "C" fn request_builder_try_clone(request_builder: *mut Request
 
     match (*request_builder).try_clone() {
         Some(v) => Box::into_raw(Box::new(v)),
-        None => ptr::null_mut()
+        None => ptr::null_mut(),
     }
 }
 

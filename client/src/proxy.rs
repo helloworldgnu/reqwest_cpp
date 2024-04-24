@@ -1,7 +1,7 @@
+use anyhow::{anyhow, Error};
 use libc::c_char;
 use reqwest::Proxy;
-use anyhow::{anyhow, Error};
-use std::{ptr, ffi::CStr};
+use std::{ffi::CStr, ptr};
 
 use crate::ffi::*;
 
@@ -13,9 +13,7 @@ pub unsafe extern "C" fn proxy_reqwest_http(proxy_scheme: *const c_char) -> *mut
         return ptr::null_mut();
     }
 
-    let result = reqwest::Proxy::http(
-        CStr::from_ptr(proxy_scheme).to_str().unwrap()
-    );
+    let result = reqwest::Proxy::http(CStr::from_ptr(proxy_scheme).to_str().unwrap());
     match result {
         Ok(p) => Box::into_raw(Box::new(p)),
         Err(e) => {
@@ -33,9 +31,7 @@ pub unsafe extern "C" fn proxy_reqwest_https(proxy_scheme: *const c_char) -> *mu
         return ptr::null_mut();
     }
 
-    let result = reqwest::Proxy::https(
-        CStr::from_ptr(proxy_scheme).to_str().unwrap()
-    );
+    let result = reqwest::Proxy::https(CStr::from_ptr(proxy_scheme).to_str().unwrap());
     match result {
         Ok(p) => Box::into_raw(Box::new(p)),
         Err(e) => {
@@ -45,7 +41,6 @@ pub unsafe extern "C" fn proxy_reqwest_https(proxy_scheme: *const c_char) -> *mu
     }
 }
 
-
 /// Proxy **all** traffic to the passed URL.
 #[no_mangle]
 pub unsafe extern "C" fn proxy_reqwest_all(proxy_scheme: *const c_char) -> *mut Proxy {
@@ -54,9 +49,7 @@ pub unsafe extern "C" fn proxy_reqwest_all(proxy_scheme: *const c_char) -> *mut 
         return ptr::null_mut();
     }
 
-    let result = reqwest::Proxy::all(
-        CStr::from_ptr(proxy_scheme).to_str().unwrap()
-    );
+    let result = reqwest::Proxy::all(CStr::from_ptr(proxy_scheme).to_str().unwrap());
     match result {
         Ok(p) => Box::into_raw(Box::new(p)),
         Err(e) => {

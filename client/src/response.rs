@@ -1,10 +1,10 @@
+use anyhow::{anyhow, Error};
+use libc::c_char;
 use reqwest::blocking::Response;
 use reqwest::header::HeaderMap;
 use reqwest::Version;
-use libc::c_char;
-use std::{ptr, mem};
 use std::ffi::CString;
-use anyhow::{Error, anyhow};
+use std::{mem, ptr};
 
 use crate::ffi::*;
 
@@ -44,8 +44,7 @@ pub unsafe extern "C" fn response_status(response: *mut Response) -> u16 {
 
 /// Get the `Headers` of this `Response`.
 #[no_mangle]
-pub unsafe extern "C" fn response_headers(response: *mut Response)
-                                          -> *const HeaderMap {
+pub unsafe extern "C" fn response_headers(response: *mut Response) -> *const HeaderMap {
     //todo
     if response.is_null() {
         update_last_error(anyhow!("response is null when use status"));
@@ -67,8 +66,7 @@ pub unsafe extern "C" fn response_headers(response: *mut Response)
 ///Version::HTTP_3 => "HTTP/3.0",
 ///_ => "unreachable"
 #[no_mangle]
-pub unsafe extern "C" fn response_version(response: *mut Response)
-                                          -> *const c_char {
+pub unsafe extern "C" fn response_version(response: *mut Response) -> *const c_char {
     if response.is_null() {
         update_last_error(anyhow!("response is null when use version"));
         return ptr::null();
@@ -80,15 +78,14 @@ pub unsafe extern "C" fn response_version(response: *mut Response)
         Version::HTTP_11 => "HTTP/1.1",
         Version::HTTP_2 => "HTTP/2.0",
         Version::HTTP_3 => "HTTP/3.0",
-        _ => "unreachable"
+        _ => "unreachable",
     };
     CString::new(res).unwrap().into_raw()
 }
 
 /// Get the final `Url` of this `Response`.
 #[no_mangle]
-pub unsafe extern "C" fn response_url(response: *mut Response)
-                                      -> *const c_char {
+pub unsafe extern "C" fn response_url(response: *mut Response) -> *const c_char {
     if response.is_null() {
         update_last_error(anyhow!("response is null when use url"));
         return ptr::null();
@@ -100,8 +97,7 @@ pub unsafe extern "C" fn response_url(response: *mut Response)
 
 /// Get the remote address used to get this `Response`.
 #[no_mangle]
-pub unsafe extern "C" fn response_remote_addr(response: *mut Response)
-                                              -> *const c_char {
+pub unsafe extern "C" fn response_remote_addr(response: *mut Response) -> *const c_char {
     if response.is_null() {
         update_last_error(anyhow!("response is null when use remote_addr"));
         return ptr::null();
@@ -109,7 +105,9 @@ pub unsafe extern "C" fn response_remote_addr(response: *mut Response)
 
     let res = match (*response).remote_addr() {
         Some(a) => a.to_string(),
-        None => { return ptr::null(); }
+        None => {
+            return ptr::null();
+        }
     };
     CString::new(res).unwrap().into_raw()
 }
@@ -118,8 +116,7 @@ pub unsafe extern "C" fn response_remote_addr(response: *mut Response)
 
 /// Get the content-length of the response, if it is known.
 #[no_mangle]
-pub unsafe extern "C" fn response_content_length(response: *mut Response)
-                                                 -> *const u64 {
+pub unsafe extern "C" fn response_content_length(response: *mut Response) -> *const u64 {
     if response.is_null() {
         update_last_error(anyhow!("response is null when use content_length"));
         return ptr::null();
@@ -127,7 +124,9 @@ pub unsafe extern "C" fn response_content_length(response: *mut Response)
 
     let res = match (*response).content_length() {
         Some(v) => v,
-        None => { return ptr::null(); }
+        None => {
+            return ptr::null();
+        }
     };
     Box::into_raw(Box::new(res))
 }
@@ -140,13 +139,11 @@ pub unsafe extern "C" fn response_content_length_destroy(content_length: *mut u6
     drop(Box::from_raw(content_length))
 }
 
-
 /// Get the full response body as `Bytes`.
 /// The difference from copy_to is : This fun Consumption ownership
 /// Don't forget free
 #[no_mangle]
-pub unsafe extern "C" fn response_bytes(response: *mut Response)
-                                        -> *const u8 {
+pub unsafe extern "C" fn response_bytes(response: *mut Response) -> *const u8 {
     if response.is_null() {
         update_last_error(anyhow!("response is null when use bytes"));
         return ptr::null();
@@ -167,7 +164,6 @@ pub unsafe extern "C" fn response_bytes(response: *mut Response)
     }
 }
 
-
 /// Get the response text given a specific encoding.
 ///
 /// This method decodes the response body with BOM sniffing
@@ -178,17 +174,22 @@ pub unsafe extern "C" fn response_bytes(response: *mut Response)
 ///
 /// [`encoding_rs`]: https://docs.rs/encoding_rs/0.8/encoding_rs/#relationship-with-windows-code-pages
 #[no_mangle]
-pub unsafe extern "C" fn response_text_with_charset(response: *mut Response, default_encoding: *const c_char)
-                                                    -> *const c_char {
+pub unsafe extern "C" fn response_text_with_charset(
+    response: *mut Response,
+    default_encoding: *const c_char,
+) -> *const c_char {
     if response.is_null() {
         update_last_error(anyhow!("response is null when use bytes"));
         return ptr::null();
     }
 
-    let r_default_encoding = match to_rust_str(default_encoding, "default_encoding parse to str failed") {
-        Some(v) => v,
-        None => { return ptr::null(); }
-    };
+    let r_default_encoding =
+        match to_rust_str(default_encoding, "default_encoding parse to str failed") {
+            Some(v) => v,
+            None => {
+                return ptr::null();
+            }
+        };
     let r_response = Box::from_raw(response);
     let res = match r_response.text_with_charset(r_default_encoding) {
         Ok(v) => v.to_string(),
@@ -210,8 +211,7 @@ pub unsafe extern "C" fn response_text_with_charset(response: *mut Response, def
 ///
 /// [`std::io::copy`]: https://doc.rust-lang.org/std/io/fn.copy.html
 #[no_mangle]
-pub unsafe extern "C" fn response_copy_to(response: *mut Response)
-                                          -> *const u8 {
+pub unsafe extern "C" fn response_copy_to(response: *mut Response) -> *const u8 {
     if response.is_null() {
         update_last_error(anyhow!("response is null when use copy"));
         return ptr::null();
@@ -254,7 +254,6 @@ pub unsafe extern "C" fn response_read(response: *mut Response, buf: *mut u8, bu
         HTTP_READ_TIMEOUT
     }
 }
-
 
 #[no_mangle]
 pub unsafe extern "C" fn response_destroy(response: *mut Response) {

@@ -1,17 +1,16 @@
 //! The foreign function interface which exposes this library to non-Rust
 //! languages.
 
-use std::ffi::{CString, CStr};
-use std::{ptr, slice, usize, time::Duration};
-use anyhow::{Error, anyhow};
+use anyhow::{anyhow, Error};
 use libc::{c_char, c_int};
 use std::cell::RefCell;
 use std::convert::From;
+use std::ffi::{CStr, CString};
+use std::{ptr, slice, time::Duration, usize};
 
 thread_local! {
     static LAST_ERROR : RefCell<Option<Box<Error>>> = RefCell::new(None);
 }
-
 
 #[repr(C)]
 //#[derive(Clone)]
@@ -51,7 +50,7 @@ impl From<&Pair> for (String, String) {
 
 /// Update the most recent error, clearing whatever may have been there before.
 pub fn update_last_error(err: Error) {
-    error!("Setting LAST_ERROR: {}",err);
+    error!("Setting LAST_ERROR: {}", err);
     println!("update_last_error : {}", err);
 
     {
@@ -113,7 +112,11 @@ pub unsafe extern "C" fn last_error_message(buffer: *mut c_char, length: c_int) 
 
     if error_message.len() >= buffer.len() {
         warn!("Buffer provided for writing the last error message is too small.");
-        warn!("Expected at least {} bytes but got {}", error_message.len() + 1, buffer.len());
+        warn!(
+            "Expected at least {} bytes but got {}",
+            error_message.len() + 1,
+            buffer.len()
+        );
         return -1;
     }
 
@@ -166,13 +169,10 @@ pub fn to_rust_str<'a>(ptr: *const c_char, err_tip: &'static str) -> Option<&'a 
     }
 }
 
-
 pub fn u64_to_millos_duration(millisecond: *const u64) -> Option<Duration> {
     if millisecond.is_null() {
         return None;
     }
 
-    unsafe {
-        Some(Duration::from_millis(*millisecond))
-    }
+    unsafe { Some(Duration::from_millis(*millisecond)) }
 }

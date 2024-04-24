@@ -1,13 +1,12 @@
 extern crate cbindgen;
 
 use cbindgen::RenameRule::CamelCase;
-use cbindgen::{StructConfig, ParseConfig, SortKey::Name};
+use cbindgen::{ParseConfig, SortKey::Name, StructConfig};
 
+use cbindgen::Config;
 use std::env;
 use std::path::PathBuf;
-use cbindgen::Config;
 use std::vec;
-
 
 fn main() {
     let crate_dir = env::var("CARGO_MANIFEST_DIR").unwrap();
@@ -18,8 +17,8 @@ fn main() {
         .display()
         .to_string();
 
-    let structure = StructConfig{
-        rename_fields : CamelCase,
+    let structure = StructConfig {
+        rename_fields: CamelCase,
         ..Default::default()
     };
 
@@ -32,7 +31,7 @@ fn main() {
         namespace: Some(String::from("ffi")),
         includes: vec![String::from("ffi.hpp")],
         pragma_once: true,
-        cpp_compat:true,
+        cpp_compat: true,
         sort_by: Name,
         structure,
         parse,
@@ -41,7 +40,10 @@ fn main() {
 
     let _ = match cbindgen::generate_with_config(&crate_dir, config) {
         Ok(x) => x.write_to_file(&output_file),
-        Err(e) => {println!("{:#?}", e); false}
+        Err(e) => {
+            println!("{:#?}", e);
+            false
+        }
     };
 }
 

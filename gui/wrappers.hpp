@@ -14,18 +14,18 @@ namespace ffi
 
 // using Bytes = std::shared_ptr<const uint8_t>;
 
-enum Kind : uint32_t
+enum ErrKind : uint32_t
 {
-    Kind_None = 0,
-    Kind_Unknown = 1,
-    Kind_TimeOut = 2,
-    Kind_Builder = 3,
-    Kind_Request = 4,
-    Kind_Redirect = 5,
-    Kind_Status = 6,
-    Kind_Body = 7,
-    Kind_Decode = 8,
-    Kind_Upgrade = 9,
+    EK_None = 0,
+    EK_Unknown = 1,
+    EK_TimeOut = 2,
+    EK_Builder = 3,
+    EK_Request = 4,
+    EK_Redirect = 5,
+    EK_Status = 6,
+    EK_Body = 7,
+    EK_Decode = 8,
+    EK_Upgrade = 9,
 };
 
 struct Bytes

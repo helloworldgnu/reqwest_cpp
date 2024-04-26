@@ -1,5 +1,5 @@
 use anyhow::{anyhow, Error};
-use libc::c_char;
+use libc::{c_char, proc_libversion};
 use reqwest::blocking::Response;
 use reqwest::header::HeaderMap;
 use reqwest::Version;
@@ -7,10 +7,9 @@ use std::ffi::CString;
 use std::{mem, ptr};
 
 use crate::ffi::*;
+use crate::utils::parse_err;
 
-#[no_mangle]
-#[used]
-pub static mut HTTP_READ_TIMEOUT: i32 = -1000;
+use utils;
 
 /// Get the response text.
 ///
@@ -19,8 +18,16 @@ pub static mut HTTP_READ_TIMEOUT: i32 = -1000;
 /// Encoding is determined from the `charset` parameter of `Content-Type` header,
 /// and defaults to `utf-8` if not presented.
 #[no_mangle]
-pub unsafe extern "C" fn response_text(response: *mut Response) -> *const c_char {
+pub unsafe extern "C" fn response_text(
+    response: *mut Response,
+    kind: *mut u32,
+    value: *mut i32,
+) -> *const c_char {
+    *kind = 0;
+    *value = 0;
+
     if response.is_null() {
+        *kind = 1001;
         update_last_error(anyhow!("response is null when use text"));
         return ptr::null_mut();
     }
@@ -28,7 +35,10 @@ pub unsafe extern "C" fn response_text(response: *mut Response) -> *const c_char
     let result = Box::from_raw(response).text();
     match result {
         Ok(v) => CString::new(v).unwrap().into_raw(),
-        Err(_) => ptr::null_mut(),
+        Err(e) => {
+            utils::parse_err(&e, kind, value);
+            ptr::null_mut()
+        }
     }
 }
 
@@ -143,8 +153,16 @@ pub unsafe extern "C" fn response_content_length_destroy(content_length: *mut u6
 /// The difference from copy_to is : This fun Consumption ownership
 /// Don't forget free
 #[no_mangle]
-pub unsafe extern "C" fn response_bytes(response: *mut Response) -> *const u8 {
+pub unsafe extern "C" fn response_bytes(
+    response: *mut Response,
+    kind: *mut u32,
+    value: *mut i32,
+) -> *const u8 {
+    *kind = 0;
+    *value = 0;
+
     if response.is_null() {
+        *kind = 1001;
         update_last_error(anyhow!("response is null when use bytes"));
         return ptr::null();
     }
@@ -158,8 +176,10 @@ pub unsafe extern "C" fn response_bytes(response: *mut Response) -> *const u8 {
             v_ptr
         }
         Err(e) => {
+            utils::parse_err(&e, kind, value);
+
             update_last_error(Error::new(e));
-            return ptr::null();
+            ptr::null()
         }
     }
 }
@@ -233,8 +253,16 @@ pub unsafe extern "C" fn response_copy_to(response: *mut Response) -> *const u8 
 
 //  int32_t read(uint8_t *buf, uint32_t buf_len);
 #[no_mangle]
-pub unsafe extern "C" fn response_read(response: *mut Response, buf: *mut u8, buf_len: u32) -> i32 {
+pub unsafe extern "C" fn response_read(
+    response: *mut Response,
+    buf: *mut u8,
+    buf_len: u32,
+    kind: *mut u32,
+) -> i32 {
+    *kind = 0;
+
     if response.is_null() {
+        *kind = 2001;
         update_last_error(anyhow!("response is null when use copy"));
         return -1;
     }
@@ -248,18 +276,25 @@ pub unsafe extern "C" fn response_read(response: *mut Response, buf: *mut u8, bu
 
     std::mem::forget(vec_buf);
 
-    let code = match result {
+    let bytes_read = match result {
         Ok(count) => count as i32,
-        Err(e) => match e.kind() {
-            std::io::ErrorKind::TimedOut => HTTP_READ_TIMEOUT,
-            _ => {
-                update_last_error(anyhow!(e));
-                -1
+        Err(e) => {
+            *kind = 2001;
+
+            if let Some(inner_err) = e.into_inner() {
+                if let Some(err) = inner_err.downcast_ref::<reqwest::Error>() {
+                    utils::parse_err(err, kind, std::ptr::null_mut());
+                } else if let Some(err) = inner_err.downcast_ref::<std::io::Error>() {
+                    utils::parse_read_err(err, kind);
+                }
+
+                update_last_error(anyhow::anyhow!(inner_err));
             }
-        },
+            -1
+        }
     };
 
-    code
+    bytes_read
 }
 
 #[no_mangle]

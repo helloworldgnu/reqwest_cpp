@@ -15,6 +15,8 @@ fern = "0.6.2"
 libc = "0.2.151"
 log = "0.4.20"
 reqwest = { version = "0.11.22", features = ["blocking", "json", "rustls", "cookies"] }
+strum = { version = "0.26", features = ["derive"] }
+strum_macros = "0.26"
 
 [lib]
 crate-type = ["cdylib", "staticlib"]

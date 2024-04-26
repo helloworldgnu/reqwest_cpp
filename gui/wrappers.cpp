@@ -296,12 +296,21 @@ void Response::destroy()
     ffi::response_destroy(this);
 }
 
-std::string Response::text_and_destroy(){RETURN_STRING_AND_FREE(ffi::response_text(this))}
+std::string Response::text_and_destroy(uint32_t *kind, int32_t *value)
+{
+    const auto text = ffi::response_text(this, kind, value);
+    if (*kind != 0)
+    {
+        throw WrapperException::Last_error();
+    }
+
+    RETURN_STRING_AND_FREE(text)
+}
 
 std::string Response::text_with_charset_and_destroy(const std::string &default_encoding){
     RETURN_STRING_AND_FREE(ffi::response_text_with_charset(this, default_encoding.c_str()))}
 
-Bytes::ptr Response::bytes_and_destroy()
+Bytes::ptr Response::bytes_and_destroy(uint32_t *kind, int32_t *value)
 {
     const uint64_t *len = ffi::response_content_length(this);
     if (!len)
@@ -312,7 +321,12 @@ Bytes::ptr Response::bytes_and_destroy()
     const uint64_t length = *len;
     response_content_length_destroy(const_cast<uint64_t *>(len));
 
-    const uint8_t *ptr = ffi::response_bytes(this);
+    const uint8_t *ptr = ffi::response_bytes(this, kind, value);
+    if (*kind != 0)
+    {
+        throw WrapperException::Last_error();
+    }
+
     std::shared_ptr<Bytes> bytes = std::make_shared<Bytes>(ptr, length);
 
     return bytes;
@@ -348,13 +362,14 @@ Bytes::ptr Response::copy_to()
     return bytes;
 }
 
-int32_t Response::read(uint8_t *buf, uint32_t buf_len)
+int32_t Response::read(uint8_t *buf, uint32_t buf_len, uint32_t *kind)
 {
-    const int32_t count = ffi::response_read(this, buf, buf_len);
-    if (count == -1)
+    const int32_t count = ffi::response_read(this, buf, buf_len, kind);
+    if (*kind != 0)
     {
         throw WrapperException::Last_error();
     }
+
     return count;
 }
 

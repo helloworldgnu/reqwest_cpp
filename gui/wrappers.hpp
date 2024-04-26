@@ -17,15 +17,24 @@ namespace ffi
 enum ErrKind : uint32_t
 {
     EK_None = 0,
-    EK_Unknown = 1,
-    EK_TimeOut = 2,
-    EK_Builder = 3,
-    EK_Request = 4,
-    EK_Redirect = 5,
-    EK_Status = 6,
-    EK_Body = 7,
-    EK_Decode = 8,
-    EK_Upgrade = 9,
+    EK_Unknown = 1001,
+    EK_TimeOut = 1002,
+    EK_Builder = 1003,
+    EK_Request = 1004,
+    EK_Redirect = 1005,
+    EK_Status = 1006,
+    EK_Body = 1007,
+    EK_Decode = 1008,
+};
+
+enum IOErrKind : uint32_t
+{
+    IO_EK_None = 0,
+    IO_EK_Unknown = 2001,
+    IO_EK_TimeOut = 2002,
+    IO_EK_ConnectionRefused = 2003,
+    IO_EK_ConnectionReset = 2004,
+    IO_EK_ConnectionAborted = 2005,
 };
 
 struct Bytes
@@ -539,7 +548,7 @@ struct Response
     /// and with malformed sequences replaced with the REPLACEMENT CHARACTER.
     /// Encoding is determined from the `charset` parameter of `Content-Type` header,
     /// and defaults to `utf-8` if not presented.
-    std::string text_and_destroy();
+    std::string text_and_destroy(uint32_t *kind, int32_t *value);
 
     /// Get the response text given a specific encoding.
     ///
@@ -554,7 +563,7 @@ struct Response
 
     /// Get the full response body as `Bytes`.
     /// The difference from copy_to is : This fun Consumption ownership
-    Bytes::ptr bytes_and_destroy();
+    Bytes::ptr bytes_and_destroy(uint32_t *kind, int32_t *value);
 
     /// todo extensions.
     /// Get the content-length of the response, if it is known.
@@ -571,7 +580,7 @@ struct Response
     /// [`std::io::copy`]: https://doc.rust-lang.org/std/io/fn.copy.html
     Bytes::ptr copy_to();
 
-    int32_t read(uint8_t *buf, uint32_t buf_len);
+    int32_t read(uint8_t *buf, uint32_t buf_len, uint32_t *kind);
 
     /// Get the `Headers` of this `Response`.
     const HeaderMap *headers();

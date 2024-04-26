@@ -7,6 +7,8 @@ use std::{ptr, slice, time::Duration};
 
 use crate::ffi::*;
 
+use crate::utils;
+
 /// Add a `Header` to this Request.
 #[no_mangle]
 pub unsafe extern "C" fn request_builder_header(
@@ -334,59 +336,22 @@ pub unsafe extern "C" fn request_builder_send(
     kind: *mut u32,
     value: *mut i32,
 ) -> *mut Response {
+    *kind = 0;
+    *value = 0;
+
     if request_builder.is_null() {
-        *kind = 2;
-        *value = 0;
+        *kind = 1001;
 
         update_last_error(anyhow!("request_builder is null when use send"));
         return ptr::null_mut();
     }
-
-    *kind = 0;
-    *value = 0;
 
     let r_request_builder = Box::from_raw(request_builder);
     let result = r_request_builder.send();
     match result {
         Ok(r) => Box::into_raw(Box::new(r)),
         Err(e) => {
-            /*
-            pub(crate) enum Kind {
-                None,
-                Unknown,
-                TimeOut,
-                Builder,
-                Request,
-                Redirect,
-                Status(StatusCode),
-                Body,
-                Decode,
-                Upgrade,
-            }
-            */
-
-            if e.is_timeout() {
-                *kind = 2;
-            } else if e.is_status() {
-                *kind = 6;
-                let v = match e.status() {
-                    Some(code) => code.as_u16() as i32,
-                    None => 0,
-                };
-                *value = v;
-            } else if e.is_builder() {
-                *kind = 3;
-            } else if e.is_request() {
-                *kind = 4;
-            } else if e.is_redirect() {
-                *kind = 5;
-            } else if e.is_body() {
-                *kind = 7;
-            } else if e.is_decode() {
-                *kind = 8;
-            } else {
-                *kind = 1;
-            }
+            utils::parse_err(&e, kind, value);
 
             let err = Error::new(e);
             update_last_error(err);

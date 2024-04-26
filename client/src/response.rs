@@ -1,5 +1,5 @@
 use anyhow::{anyhow, Error};
-use libc::{c_char, proc_libversion};
+use libc::c_char;
 use reqwest::blocking::Response;
 use reqwest::header::HeaderMap;
 use reqwest::Version;
@@ -7,7 +7,6 @@ use std::ffi::CString;
 use std::{mem, ptr};
 
 use crate::ffi::*;
-use crate::utils::parse_err;
 
 use utils;
 

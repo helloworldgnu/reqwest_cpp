@@ -1,5 +1,5 @@
-set(LD_LIBRARY_PATH "/usr/bin/qt-5.12/lib:$LD_LIBRARY_PATH")
-set(CMAKE_PREFIX_PATH "/usr/bin/qt-5.12")
+set(LD_LIBRARY_PATH "/Users/leo/Documents/Qt5.15.13/lib:$LD_LIBRARY_PATH")
+set(CMAKE_PREFIX_PATH "/Users/leo/Documents/Qt5.15.13")
 set(Qt5_DIR "${CMAKE_PREFIX_PATH}/lib/cmake/Qt5")
 set(Qt5Widgets_DIR "${CMAKE_PREFIX_PATH}/lib/cmake/Qt5Widgets")
 set(Qt5Network_DIR "${CMAKE_PREFIX_PATH}/lib/cmake/Qt5Network")
@@ -23,13 +23,13 @@ add_executable(gui ${SOURCE})
 
 get_target_property(CLIENT_DIR client LOCATION)
 target_link_libraries(gui Qt5::Widgets)
-target_link_libraries(gui ${CLIENT_DIR}/libclient.so)
+target_link_libraries(gui ${CLIENT_DIR}/libclient.dylib)
 add_dependencies(gui client)
 
 # 生成so库
 set(SRC wrappers.cpp wrappers.hpp ffi.hpp)
 add_library(reqwest_cpp SHARED ${SRC})
-target_link_libraries(reqwest_cpp ${CLIENT_DIR}/libclient.so)
+target_link_libraries(reqwest_cpp ${CLIENT_DIR}/libclient.dylib)
 #add_dependencies(reqwest_cpp client)
 
 # 测试静态链接生成的so库

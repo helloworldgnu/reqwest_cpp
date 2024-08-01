@@ -1,13 +1,11 @@
 #include <QtWidgets/QMainWindow>
 #include <QtWidgets/QPushButton>
 
-class MainWindow : public QMainWindow {
+class MainWindow : public QWidget {
   Q_OBJECT
 public:
   MainWindow(QWidget* parent = nullptr);
 private slots:
   void test_full();
-  void test_destructor();
-private:
-  QPushButton* button;
+  void test_download();
 };

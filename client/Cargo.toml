@@ -14,7 +14,7 @@ chrono = "0.4.31"
 fern = "0.6.2"
 libc = "0.2.151"
 log = "0.4.20"
-reqwest = { version = "0.11.22", features = ["blocking", "json", "rustls", "cookies"] }
+reqwest = { version = "0.12.5", features = ["blocking", "json", "cookies"] }
 strum = { version = "0.26", features = ["derive"] }
 strum_macros = "0.26"
 
@@ -22,4 +22,4 @@ strum_macros = "0.26"
 crate-type = ["cdylib", "staticlib"]
 
 [build-dependencies]
-cbindgen = "0.24.3"
+cbindgen = "0.26.0"

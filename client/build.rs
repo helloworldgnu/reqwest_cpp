@@ -27,16 +27,14 @@ fn main() {
         include: Some(vec![String::from("reqwest::blocking")]),
         ..Default::default()
     };
-    let config = Config {
-        namespace: Some(String::from("ffi")),
-        includes: vec![String::from("ffi.hpp")],
-        pragma_once: true,
-        cpp_compat: true,
-        sort_by: Name,
-        structure,
-        parse,
-        ..Default::default()
-    };
+    let mut config = Config::default();
+    config.namespace = Some(String::from("ffi"));
+    config.includes =  vec![String::from("ffi.hpp")];
+    config.pragma_once = true;
+    config.cpp_compat = true;
+    config.sort_by= Name;
+    config.structure = structure;
+    config.parse = parse;
 
     let _ = match cbindgen::generate_with_config(&crate_dir, config) {
         Ok(x) => x.write_to_file(&output_file),

@@ -651,7 +651,7 @@ pub unsafe extern "C" fn client_builder_no_trust_dns(
     }
 
     let r_client_builder = Box::from_raw(client_builder);
-    let result = r_client_builder.no_trust_dns();
+    let result = r_client_builder.no_hickory_dns();
     Box::into_raw(Box::new(result))
 }
 

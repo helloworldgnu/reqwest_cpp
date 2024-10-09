@@ -1,12 +1,12 @@
-set(LD_LIBRARY_PATH "/Users/leo/Documents/Qt5.15.13/lib:$LD_LIBRARY_PATH")
-set(CMAKE_PREFIX_PATH "/Users/leo/Documents/Qt5.15.13")
+set(LD_LIBRARY_PATH "${QT_HOME}/lib:$LD_LIBRARY_PATH")
+set(CMAKE_PREFIX_PATH "${QT_HOME}")
 set(Qt5_DIR "${CMAKE_PREFIX_PATH}/lib/cmake/Qt5")
 set(Qt5Widgets_DIR "${CMAKE_PREFIX_PATH}/lib/cmake/Qt5Widgets")
 set(Qt5Network_DIR "${CMAKE_PREFIX_PATH}/lib/cmake/Qt5Network")
 set(Qt5LinguistTools_DIR "${CMAKE_PREFIX_PATH}/lib/cmake/Qt5LinguistTools")
 
 # QT 设置
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTOUIC ON)
@@ -17,7 +17,7 @@ find_package(Qt5Widgets)
 set(CLIENT_BUILD_DIR ${CMAKE_BINARY_DIR}/client)
 include_directories(${CLIENT_BUILD_DIR})
 
-set(SOURCE main_window.cpp main_window.hpp wrappers.cpp wrappers.hpp main.cpp )
+set(SOURCE main_window.cpp main_window.hpp wrappers.cpp wrappers.hpp main.cpp)
 
 add_executable(gui ${SOURCE})
 

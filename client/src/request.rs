@@ -176,6 +176,46 @@ pub unsafe extern "C" fn request_builder_body_file(
     Box::into_raw(Box::new(res))
 }
 
+/// Set the request body from file.
+#[no_mangle]
+pub unsafe extern "C" fn request_builder_body_file_with_name(
+    request_builder: *mut RequestBuilder,
+    file_name: *const c_char,
+    file_path: *const c_char,
+) -> *mut RequestBuilder {
+    let r_file_path = match to_rust_str(file_path, "parse body string error") {
+        Some(v) => v,
+        None => {
+            return ptr::null_mut();
+        }
+    };
+
+    let r_file_name = match to_rust_str(file_name, "parse name string error") {
+        Some(v) => v,
+        None => {
+            return ptr::null_mut();
+        }
+    };
+
+    if request_builder.is_null() {
+        update_last_error(anyhow!("request_builder is null when use body"));
+        return ptr::null_mut();
+    }
+
+    let r_request_builder = Box::from_raw(request_builder);
+    let multi_part_file =
+        match reqwest::blocking::multipart::Form::new().file(r_file_name, r_file_path) {
+            Ok(f) => f,
+            Err(e) => {
+                update_last_error(Error::new(e));
+                return ptr::null_mut();
+            }
+        };
+
+    let res = r_request_builder.multipart(multi_part_file);
+    Box::into_raw(Box::new(res))
+}
+
 /// Enables a request timeout.
 ///
 /// The timeout is applied from when the request starts connecting until the

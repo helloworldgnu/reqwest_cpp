@@ -467,6 +467,7 @@ struct RequestBuilder
 
     /// Set the request body from file.
     RequestBuilder *file_body(const std::string &file_path);
+    RequestBuilder *file_body_with_name(const std::string &file_name, const std::string &file_path);
 
     /// Set the request body from UTF-8 text.
     RequestBuilder *body(const std::string &str);

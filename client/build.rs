@@ -29,10 +29,10 @@ fn main() {
     };
     let mut config = Config::default();
     config.namespace = Some(String::from("ffi"));
-    config.includes =  vec![String::from("ffi.hpp")];
+    config.includes = vec![String::from("ffi.hpp")];
     config.pragma_once = true;
     config.cpp_compat = true;
-    config.sort_by= Name;
+    config.sort_by = Name;
     config.structure = structure;
     config.parse = parse;
 

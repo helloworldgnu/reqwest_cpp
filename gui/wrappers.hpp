@@ -42,7 +42,7 @@ struct Bytes
     using ptr = std::shared_ptr<Bytes>;
     const uint8_t *m_data;
     const uint64_t m_len;
-    Bytes(const uint8_t *data, const uint64_t len) : m_data(data), m_len(len){};
+    Bytes(const uint8_t *data, const uint64_t len) : m_data(data), m_len(len) {};
     ~Bytes();
 };
 
@@ -51,7 +51,7 @@ std::string last_error_message();
 class WrapperException : std::exception
 {
   public:
-    WrapperException(const std::string &msg) : msg(msg){};
+    WrapperException(const std::string &msg) : msg(msg) {};
     static WrapperException Last_error();
 
     const char *what() const throw()
@@ -620,4 +620,4 @@ Proxy *all(const std::string &proxy_scheme);
 void destroy(Proxy *p);
 }; // namespace proxy
 
-}
+} // namespace ffi

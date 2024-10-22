@@ -18,6 +18,7 @@ set(SOURCE main.cpp
 )
 
 add_executable(gui ${SOURCE})
+add_dependencies(gui client)
 
 target_link_libraries(gui
         Qt${QT_VERSION_MAJOR}::Core
@@ -32,7 +33,7 @@ elseif (APPLE)
 else ()
     target_link_libraries(gui ${CLIENT_LIB_DIR}/libclient.so)
 endif ()
-add_dependencies(gui client)
+
 
 
 # 生成so库

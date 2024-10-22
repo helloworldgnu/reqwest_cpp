@@ -1,5 +1,10 @@
 Provide c/c++to call rust's reqwest library using ffi mode
 
+# build
+cmake:
+
+build client first, then build gui
+
 # Usage
 Example in dir gui, Used qt.
 in c++ you need link reqwest_cpp and client.

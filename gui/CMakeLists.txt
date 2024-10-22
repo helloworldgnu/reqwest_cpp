@@ -1,35 +1,59 @@
-set(LD_LIBRARY_PATH "${QT_HOME}/lib:$LD_LIBRARY_PATH")
-set(CMAKE_PREFIX_PATH "${QT_HOME}")
-set(Qt5_DIR "${CMAKE_PREFIX_PATH}/lib/cmake/Qt5")
-set(Qt5Widgets_DIR "${CMAKE_PREFIX_PATH}/lib/cmake/Qt5Widgets")
-set(Qt5Network_DIR "${CMAKE_PREFIX_PATH}/lib/cmake/Qt5Network")
-set(Qt5LinguistTools_DIR "${CMAKE_PREFIX_PATH}/lib/cmake/Qt5LinguistTools")
-
-# QT 设置
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_PREFIX_PATH "${QT_HOME}/lib/cmake")
 
 set(CMAKE_AUTOMOC ON)
-set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTORCC ON)
+set(CMAKE_AUTOUIC ON)
+
+find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Core Gui Widgets)
+find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Core Gui Widgets REQUIRED)
+
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
-find_package(Qt5Widgets)
+set(CLIENT_LIB_DIR ${CMAKE_BINARY_DIR}/client)
+set(CLIENT_HEADER_SRC "${CMAKE_BINARY_DIR}/client/client.hpp")
+set(CLIENT_HEADER_DST "${CMAKE_CURRENT_SOURCE_DIR}/client.hpp")
 
-set(CLIENT_BUILD_DIR ${CMAKE_BINARY_DIR}/client)
-include_directories(${CLIENT_BUILD_DIR})
+# 添加一个自定义命令，将client.hpp文件拷贝到gui目录
+add_custom_command(
+        OUTPUT ${CLIENT_HEADER_DST}
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CLIENT_HEADER_SRC} ${CLIENT_HEADER_DST}
+        DEPENDS ${CLIENT_HEADER_SRC}
+        COMMENT "Copying client.hpp to gui directory"
+)
 
-set(SOURCE main_window.cpp main_window.hpp wrappers.cpp wrappers.hpp main.cpp)
+set(SOURCE main.cpp
+        main_window.cpp main_window.hpp
+        wrappers.cpp wrappers.hpp
+        client.hpp
+)
 
 add_executable(gui ${SOURCE})
 
-get_target_property(CLIENT_DIR client LOCATION)
-target_link_libraries(gui Qt5::Widgets)
-target_link_libraries(gui ${CLIENT_DIR}/libclient.dylib)
+target_link_libraries(gui
+        Qt${QT_VERSION_MAJOR}::Core
+        Qt${QT_VERSION_MAJOR}::Gui
+        Qt${QT_VERSION_MAJOR}::Widgets
+)
+
+if (WIN32)
+    target_link_libraries(gui ${CLIENT_LIB_DIR}/client.dll)
+elseif (APPLE)
+    target_link_libraries(gui ${CLIENT_LIB_DIR}/libclient.dylib)
+else ()
+    target_link_libraries(gui ${CLIENT_LIB_DIR}/libclient.so)
+endif ()
 add_dependencies(gui client)
 
+# 指定在编译gui之前先执行复制任务
+add_custom_target(copy_client_header ALL DEPENDS ${CLIENT_HEADER_DST})
+
+# 确保gui依赖于header文件的拷贝
+add_dependencies(gui copy_client_header)
+
 # 生成so库
-set(SRC wrappers.cpp wrappers.hpp ffi.hpp)
-add_library(reqwest_cpp SHARED ${SRC})
-target_link_libraries(reqwest_cpp ${CLIENT_DIR}/libclient.dylib)
+#set(SRC wrappers.cpp wrappers.hpp ffi.hpp)
+#add_library(reqwest_cpp SHARED ${SRC})
+#target_link_libraries(reqwest_cpp ${CLIENT_DIR}/libclient.dylib)
 #add_dependencies(reqwest_cpp client)
 
 # 测试静态链接生成的so库

@@ -10,16 +10,6 @@ find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Core Gui Widgets REQUIRED)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CLIENT_LIB_DIR ${CMAKE_BINARY_DIR}/client)
-set(CLIENT_HEADER_SRC "${CMAKE_BINARY_DIR}/client/client.hpp")
-set(CLIENT_HEADER_DST "${CMAKE_CURRENT_SOURCE_DIR}/client.hpp")
-
-# 添加一个自定义命令，将client.hpp文件拷贝到gui目录
-add_custom_command(
-        OUTPUT ${CLIENT_HEADER_DST}
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CLIENT_HEADER_SRC} ${CLIENT_HEADER_DST}
-        DEPENDS ${CLIENT_HEADER_SRC}
-        COMMENT "Copying client.hpp to gui directory"
-)
 
 set(SOURCE main.cpp
         main_window.cpp main_window.hpp
@@ -44,11 +34,6 @@ else ()
 endif ()
 add_dependencies(gui client)
 
-# 指定在编译gui之前先执行复制任务
-add_custom_target(copy_client_header ALL DEPENDS ${CLIENT_HEADER_DST})
-
-# 确保gui依赖于header文件的拷贝
-add_dependencies(gui copy_client_header)
 
 # 生成so库
 #set(SRC wrappers.cpp wrappers.hpp ffi.hpp)

@@ -9,7 +9,7 @@ endif ()
 
 # 根据平台设置动态库后缀
 if (WIN32)
-    set(CLIENT_LIB "${CMAKE_CURRENT_SOURCE_DIR}/target/${TARGET_DIR}/client.dll")
+    file(GLOB CLIENT_LIBS "${CMAKE_CURRENT_SOURCE_DIR}/target/${TARGET_DIR}/client.*")
 elseif (APPLE)
     set(CLIENT_LIB "${CMAKE_CURRENT_SOURCE_DIR}/target/${TARGET_DIR}/libclient.dylib")
 else ()
@@ -18,12 +18,25 @@ endif ()
 
 message(STATUS "client lib path:${CLIENT_LIB} current binary dir:${CMAKE_CURRENT_BINARY_DIR}")
 
-add_custom_target(client ALL
-        COMMENT "Compiling client module"
-        COMMAND ${CARGO_CMD}
-        COMMAND ${CMAKE_COMMAND} -E copy ${CLIENT_LIB} ${CMAKE_CURRENT_BINARY_DIR}
-        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
-
+if (WIN32)
+    add_custom_target(client ALL
+            COMMENT "Compiling client module"
+            COMMAND ${CARGO_CMD}
+            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+    foreach (CLIENT_LIB ${CLIENT_LIBS})
+        add_custom_command(
+                TARGET client POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E copy ${CLIENT_LIB} ${CMAKE_CURRENT_BINARY_DIR}
+                COMMENT "Copying ${CLIENT_LIB} to ${CMAKE_CURRENT_BINARY_DIR}"
+        )
+    endforeach ()
+else ()
+    add_custom_target(client ALL
+            COMMENT "Compiling client module"
+            COMMAND ${CARGO_CMD}
+            COMMAND ${CMAKE_COMMAND} -E copy ${CLIENT_LIB} ${CMAKE_CURRENT_BINARY_DIR}
+            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+endif ()
 set(CLIENT_HEADER_SRC "${CMAKE_CURRENT_SOURCE_DIR}/target/client.hpp")
 set(CLIENT_HEADER_DST "${CMAKE_SOURCE_DIR}/gui/client.hpp")
 

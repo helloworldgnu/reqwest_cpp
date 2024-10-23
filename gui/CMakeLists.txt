@@ -27,7 +27,7 @@ target_link_libraries(gui
 )
 
 if (WIN32)
-    target_link_libraries(gui ${CLIENT_LIB_DIR}/client.dll)
+    target_link_libraries(gui ${CLIENT_LIB_DIR}/client.dll.lib)
 elseif (APPLE)
     target_link_libraries(gui ${CLIENT_LIB_DIR}/libclient.dylib)
 else ()

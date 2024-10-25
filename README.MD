@@ -1,5 +1,7 @@
 Provide c/c++to call rust's reqwest library using ffi mode
 
+# ENV
+Windows: rust v1.77 is required
 # build
 cmake:
 

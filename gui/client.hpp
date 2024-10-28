@@ -552,7 +552,7 @@ void response_content_length_destroy(uint64_t *content_length);
 /// On success, the total number of bytes that were copied to `writer` is returned.
 ///
 /// [`std::io::copy`]: https://doc.rust-lang.org/std/io/fn.copy.html
-const uint8_t *response_copy_to(Response *response);
+const uint8_t *response_copy_to(Response *response, uint64_t *length);
 
 void response_destroy(Response *response);
 

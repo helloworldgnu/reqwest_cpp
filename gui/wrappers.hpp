@@ -1,18 +1,19 @@
 #pragma once
 
 #include <cstdint>
+#include <functional>
 #include <initializer_list>
 #include <memory>
 #include <string>
 #include <sys/types.h>
 #include <vector>
 
+#include "response_content.h"
+
 #include "ffi.hpp"
 
 namespace ffi
 {
-
-// using Bytes = std::shared_ptr<const uint8_t>;
 
 enum ErrKind : uint32_t
 {
@@ -35,15 +36,6 @@ enum IOErrKind : uint32_t
     IO_EK_ConnectionRefused = 2003,
     IO_EK_ConnectionReset = 2004,
     IO_EK_ConnectionAborted = 2005,
-};
-
-struct Bytes
-{
-    using ptr = std::shared_ptr<Bytes>;
-    const uint8_t *m_data;
-    const uint64_t m_len;
-    Bytes(const uint8_t *data, const uint64_t len) : m_data(data), m_len(len) {};
-    ~Bytes();
 };
 
 std::string last_error_message();
@@ -549,7 +541,7 @@ struct Response
     /// and with malformed sequences replaced with the REPLACEMENT CHARACTER.
     /// Encoding is determined from the `charset` parameter of `Content-Type` header,
     /// and defaults to `utf-8` if not presented.
-    std::string text_and_destroy(uint32_t *kind, int32_t *value);
+    RespRawData::uptr text_content(uint32_t *kind, int32_t *value);
 
     /// Get the response text given a specific encoding.
     ///
@@ -564,7 +556,7 @@ struct Response
 
     /// Get the full response body as `Bytes`.
     /// The difference from copy_to is : This fun Consumption ownership
-    Bytes::ptr bytes_and_destroy(uint32_t *kind, int32_t *value);
+    RespRawData::uptr bytes_content(uint32_t *kind, int32_t *value);
 
     /// todo extensions.
     /// Get the content-length of the response, if it is known.
@@ -579,7 +571,7 @@ struct Response
     /// On success, the total number of bytes that were copied to `writer` is returned.
     ///
     /// [`std::io::copy`]: https://doc.rust-lang.org/std/io/fn.copy.html
-    Bytes::ptr copy_to();
+    RespRawData::uptr copy_to();
 
     int32_t read(uint8_t *buf, uint32_t buf_len, uint32_t *kind);
 

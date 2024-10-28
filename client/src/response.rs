@@ -238,15 +238,22 @@ pub unsafe extern "C" fn response_text_with_charset(
 ///
 /// [`std::io::copy`]: https://doc.rust-lang.org/std/io/fn.copy.html
 #[no_mangle]
-pub unsafe extern "C" fn response_copy_to(response: *mut Response) -> *const u8 {
-    if response.is_null() {
+pub unsafe extern "C" fn response_copy_to(response: *mut Response, length: *mut u64) -> *const u8 {
+    if response.is_null() || length.is_null() {
+        if !length.is_null() {
+            *length = 0;
+        }
         update_last_error(anyhow!("response is null when use copy"));
         return ptr::null();
     }
 
+    *length = 0;
+
     let mut buf: Vec<u8> = vec![];
     match (*response).copy_to(&mut buf) {
         Ok(_) => {
+            *length = buf.len() as u64;
+
             let v_ptr = buf.as_ptr();
             mem::forget(buf);
             v_ptr

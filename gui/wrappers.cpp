@@ -458,20 +458,20 @@ std::string Response::text_with_charset_and_destroy(const std::string &default_e
 
 Bytes::ptr Response::bytes_and_destroy(uint32_t *kind, int32_t *value)
 {
-    const uint64_t *len = ffi::response_content_length(this);
-    if (!len)
-    {
-        throw WrapperException::Last_error();
+    auto *contentLength = (uint64_t*)malloc(sizeof(uint64_t));
+    if (!contentLength) {
+       return {};
     }
 
-    const uint64_t length = *len;
-    response_content_length_destroy(const_cast<uint64_t *>(len));
-
-    const uint8_t *ptr = ffi::response_bytes(this, kind, value);
+    *contentLength = 0;
+    const uint8_t *ptr = ffi::response_bytes(this, contentLength, kind, value);
+    auto length = *contentLength;
     if (*kind != 0)
     {
+        free(contentLength);
         throw WrapperException::Last_error();
     }
+    free(contentLength);
 
     std::shared_ptr<Bytes> bytes = std::make_shared<Bytes>(ptr, length);
 

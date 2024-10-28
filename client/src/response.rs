@@ -31,7 +31,8 @@ pub unsafe extern "C" fn response_text(
         return ptr::null_mut();
     }
 
-    let result = Box::from_raw(response).text();
+    let mut resp = Box::from_raw(response);
+    let result = resp.text();
     match result {
         Ok(v) => CString::new(v).unwrap().into_raw(),
         Err(e) => {
@@ -154,22 +155,29 @@ pub unsafe extern "C" fn response_content_length_destroy(content_length: *mut u6
 #[no_mangle]
 pub unsafe extern "C" fn response_bytes(
     response: *mut Response,
+    length: *mut u64,
     kind: *mut u32,
     value: *mut i32,
 ) -> *const u8 {
-    *kind = 0;
-    *value = 0;
+    if response.is_null() || length.is_null() {
+        if !length.is_null() {
+            *kind = 1001;
+        }
 
-    if response.is_null() {
-        *kind = 1001;
         update_last_error(anyhow!("response is null when use bytes"));
         return ptr::null();
     }
+
+    *length = 0;
+    *kind = 0;
+    *value = 0;
 
     let r_response = Box::from_raw(response);
     match r_response.bytes() {
         Ok(b) => {
             let v = b.to_vec();
+            *length = v.len() as u64;
+
             let v_ptr = v.as_ptr();
             mem::forget(v);
             v_ptr

@@ -535,7 +535,7 @@ RequestBuilder *request_builder_version(RequestBuilder *request_builder, const c
 /// Get the full response body as `Bytes`.
 /// The difference from copy_to is : This fun Consumption ownership
 /// Don't forget free
-const uint8_t *response_bytes(Response *response, uint32_t *kind, int32_t *value);
+const uint8_t *response_bytes(Response *response, uint64_t *length, uint32_t *kind, int32_t *value);
 
 /// todo extensions.
 /// Get the content-length of the response, if it is known.

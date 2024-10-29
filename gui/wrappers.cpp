@@ -23,7 +23,7 @@ namespace ffi
     if (_v)                                                                                                                                                         \
     {                                                                                                                                                               \
         std::string _res(_v);                                                                                                                                       \
-        ffi::free_string(_v);                                                                                                                                       \
+        ffi::free_c_string(_v);                                                                                                                                       \
         return _res;                                                                                                                                                \
     }                                                                                                                                                               \
     else                                                                                                                                                            \
@@ -275,13 +275,14 @@ void Response::destroy()
 
 RespRawData::uptr Response::text_content(uint32_t *kind, int32_t *value)
 {
-    auto text = ffi::response_text(this, kind, value);
+    auto length = std::make_unique<uint64_t>(0);
+    auto text = ffi::response_text(this, length.get(), kind, value);
     if (*kind != 0)
     {
         throw WrapperException::Last_error();
     }
 
-    return std::make_unique<RespRawData>(RespRawData::DataType::TEXT, reinterpret_cast<const uint8_t *>(text), 0);
+    return std::make_unique<RespRawData>(RespRawData::DataType::TEXT, text, *length);
 }
 
 std::string Response::text_with_charset_and_destroy(const std::string &default_encoding){

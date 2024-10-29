@@ -19,9 +19,11 @@ use utils;
 #[no_mangle]
 pub unsafe extern "C" fn response_text(
     response: *mut Response,
+    length: *mut u64,
     kind: *mut u32,
     value: *mut i32,
-) -> *const c_char {
+) -> *const u8 {
+    *length = 0;
     *kind = 0;
     *value = 0;
 
@@ -34,7 +36,13 @@ pub unsafe extern "C" fn response_text(
     let mut resp = Box::from_raw(response);
     let result = resp.text();
     match result {
-        Ok(v) => CString::new(v).unwrap().into_raw(),
+        Ok(v) => {
+            *length = v.len() as u64;
+
+            let text = v.as_ptr();
+            std::mem::forget(v);
+            text
+        }
         Err(e) => {
             utils::parse_err(&e, kind, value);
             ptr::null_mut()

@@ -11,7 +11,7 @@ RespRawData::~RespRawData()
     {
         if (m_dataType == DataType::TEXT)
         {
-            free_string(reinterpret_cast<const char *>(m_data));
+            free_string(const_cast<uint8_t *>(m_data), m_len);
         }
         else
         {

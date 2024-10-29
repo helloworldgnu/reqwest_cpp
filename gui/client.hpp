@@ -311,7 +311,9 @@ RequestBuilder *client_put(Client *client, const char *url);
 /// This method fails whenever supplied `Url` cannot be parsed.
 RequestBuilder *client_request(Client *client, const char *method, const char *url);
 
-void free_string(const char *s);
+void free_c_string(const char *s);
+
+void free_string(uint8_t *text, uint64_t length);
 
 void free_vec_u8(const uint8_t *s, uintptr_t len);
 
@@ -573,7 +575,7 @@ uint16_t response_status(Response *response);
 /// and with malformed sequences replaced with the REPLACEMENT CHARACTER.
 /// Encoding is determined from the `charset` parameter of `Content-Type` header,
 /// and defaults to `utf-8` if not presented.
-const char *response_text(Response *response, uint32_t *kind, int32_t *value);
+const uint8_t *response_text(Response *response, uint64_t *length, uint32_t *kind, int32_t *value);
 
 /// Get the response text given a specific encoding.
 ///

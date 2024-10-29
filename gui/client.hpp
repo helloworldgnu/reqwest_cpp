@@ -313,8 +313,6 @@ RequestBuilder *client_request(Client *client, const char *method, const char *u
 
 void free_c_string(const char *s);
 
-void free_string(uint8_t *text, uint64_t length);
-
 void free_vec_u8(const uint8_t *s, uintptr_t len);
 
 /// Inserts a key-value pair into the map.

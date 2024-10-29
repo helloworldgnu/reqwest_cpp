@@ -5,34 +5,27 @@
 namespace ffi
 {
 
-RespRawData::~RespRawData()
+RespRaw::~RespRaw()
 {
-    if (m_data)
+    if (data_)
     {
-        if (m_dataType == DataType::TEXT)
-        {
-            free_string(const_cast<uint8_t *>(m_data), m_len);
-        }
-        else
-        {
-            ffi::free_vec_u8(m_data, m_len);
-        }
+        ffi::free_vec_u8(data_, len_);
     }
 }
 
-const char *RespRawData::rawChar() const
+const char *RespRaw::rawChar() const
 {
-    return reinterpret_cast<const char *>(m_data);
+    return reinterpret_cast<const char *>(data_);
 }
 
-const uint8_t *RespRawData::rawBytes() const
+const uint8_t *RespRaw::rawBytes() const
 {
-    return m_data;
+    return data_;
 }
 
-uint64_t RespRawData::rawBytesLength() const
+uint64_t RespRaw::rawBytesLength() const
 {
-    return m_len;
+    return len_;
 }
 
 } // namespace ffi

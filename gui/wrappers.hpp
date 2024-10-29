@@ -8,8 +8,6 @@
 #include <sys/types.h>
 #include <vector>
 
-#include "response_content.h"
-
 #include "ffi.hpp"
 
 namespace ffi
@@ -531,6 +529,7 @@ struct RequestBuilder
     ~RequestBuilder() = delete;
 };
 
+class RespRaw;
 struct Response
 {
 
@@ -541,7 +540,7 @@ struct Response
     /// and with malformed sequences replaced with the REPLACEMENT CHARACTER.
     /// Encoding is determined from the `charset` parameter of `Content-Type` header,
     /// and defaults to `utf-8` if not presented.
-    RespRawData::uptr text_content(uint32_t *kind, int32_t *value);
+    std::unique_ptr<RespRaw> text_content(uint32_t *kind, int32_t *value);
 
     /// Get the response text given a specific encoding.
     ///
@@ -556,7 +555,7 @@ struct Response
 
     /// Get the full response body as `Bytes`.
     /// The difference from copy_to is : This fun Consumption ownership
-    RespRawData::uptr bytes_content(uint32_t *kind, int32_t *value);
+    std::unique_ptr<RespRaw> bytes_content(uint32_t *kind, int32_t *value);
 
     /// todo extensions.
     /// Get the content-length of the response, if it is known.
@@ -571,7 +570,7 @@ struct Response
     /// On success, the total number of bytes that were copied to `writer` is returned.
     ///
     /// [`std::io::copy`]: https://doc.rust-lang.org/std/io/fn.copy.html
-    RespRawData::uptr copy_to();
+    std::unique_ptr<RespRaw> copy_to();
 
     int32_t read(uint8_t *buf, uint32_t buf_len, uint32_t *kind);
 

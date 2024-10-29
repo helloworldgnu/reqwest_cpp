@@ -144,11 +144,6 @@ pub unsafe extern "C" fn free_c_string(s: *const c_char) {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn free_string(text: *mut u8, length: u64) {
-    String::from_raw_parts(text, length as usize, length as usize);
-}
-
-#[no_mangle]
 pub unsafe extern "C" fn free_vec_u8(s: *const u8, len: usize) {
     if s.is_null() {
         update_last_error(anyhow!("u8 ptr is null"));

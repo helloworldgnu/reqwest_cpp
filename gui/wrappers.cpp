@@ -9,6 +9,8 @@
 #include <sys/types.h>
 #include <vector>
 
+#include "response_content.h"
+
 namespace ffi
 {
 
@@ -23,7 +25,7 @@ namespace ffi
     if (_v)                                                                                                                                                         \
     {                                                                                                                                                               \
         std::string _res(_v);                                                                                                                                       \
-        ffi::free_c_string(_v);                                                                                                                                       \
+        ffi::free_c_string(_v);                                                                                                                                     \
         return _res;                                                                                                                                                \
     }                                                                                                                                                               \
     else                                                                                                                                                            \
@@ -273,7 +275,7 @@ void Response::destroy()
     ffi::response_destroy(this);
 }
 
-RespRawData::uptr Response::text_content(uint32_t *kind, int32_t *value)
+RespRaw::uptr Response::text_content(uint32_t *kind, int32_t *value)
 {
     auto length = std::make_unique<uint64_t>(0);
     auto text = ffi::response_text(this, length.get(), kind, value);
@@ -282,13 +284,13 @@ RespRawData::uptr Response::text_content(uint32_t *kind, int32_t *value)
         throw WrapperException::Last_error();
     }
 
-    return std::make_unique<RespRawData>(RespRawData::DataType::TEXT, text, *length);
+    return RespRaw::create(text, *length);
 }
 
 std::string Response::text_with_charset_and_destroy(const std::string &default_encoding){
     RETURN_STRING_AND_FREE(ffi::response_text_with_charset(this, default_encoding.c_str()))}
 
-RespRawData::uptr Response::bytes_content(uint32_t *kind, int32_t *value)
+RespRaw::uptr Response::bytes_content(uint32_t *kind, int32_t *value)
 {
     auto content_length = std::make_unique<uint64_t>(0);
     if (!content_length)
@@ -303,7 +305,7 @@ RespRawData::uptr Response::bytes_content(uint32_t *kind, int32_t *value)
         throw WrapperException::Last_error();
     }
 
-    return std::make_unique<RespRawData>(RespRawData::DataType::BYTES, ptr, length);
+    return RespRaw::create(ptr, length);
 }
 
 uint64_t Response::content_length()
@@ -319,7 +321,7 @@ uint64_t Response::content_length()
     return length;
 }
 
-RespRawData::uptr Response::copy_to()
+RespRaw::uptr Response::copy_to()
 {
     auto content_length = std::make_unique<uint64_t>(0);
     if (!content_length)
@@ -330,7 +332,7 @@ RespRawData::uptr Response::copy_to()
     const uint8_t *ptr = ffi::response_copy_to(this, content_length.get());
     auto length = *content_length;
 
-    return std::make_unique<RespRawData>(RespRawData::DataType::BYTES, ptr, length);
+    return RespRaw::create(ptr, length);
 }
 
 int32_t Response::read(uint8_t *buf, uint32_t buf_len, uint32_t *kind)

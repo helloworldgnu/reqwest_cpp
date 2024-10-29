@@ -43,7 +43,7 @@ std::string last_error_message();
 class WrapperException : std::exception
 {
   public:
-    WrapperException(const std::string &msg) : msg(msg) {};
+    explicit WrapperException(const std::string &msg) : msg(msg) {};
     static WrapperException Last_error();
 
     const char *what() const throw()
@@ -52,7 +52,7 @@ class WrapperException : std::exception
     }
 
   private:
-    std::string msg = "";
+    std::string msg;
 };
 
 struct HeaderMap

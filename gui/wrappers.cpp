@@ -39,7 +39,7 @@ std::string last_error_message()
     }
 
     std::string msg(error_length, '\0');
-    int ret = ffi::last_error_message(&msg[0], msg.length());
+    int ret = ffi::last_error_message(&msg[0], static_cast<int>(msg.length()));
     if (ret <= 0)
     {
         throw new WrapperException("Fetching error message failed");
@@ -50,8 +50,7 @@ std::string last_error_message()
 WrapperException WrapperException::Last_error()
 {
     std::string msg = last_error_message();
-
-    if (msg.length() == 0)
+    if (msg.empty())
     {
         return WrapperException("(no err available)");
     }
@@ -290,21 +289,18 @@ std::string Response::text_with_charset_and_destroy(const std::string &default_e
 
 RespRawData::uptr Response::bytes_content(uint32_t *kind, int32_t *value)
 {
-    auto content_length = (uint64_t *)malloc(sizeof(uint64_t));
+    auto content_length = std::make_unique<uint64_t>(0);
     if (!content_length)
     {
         return {};
     }
-    *content_length = 0;
 
-    const uint8_t *ptr = ffi::response_bytes(this, content_length, kind, value);
+    const uint8_t *ptr = ffi::response_bytes(this, content_length.get(), kind, value);
     auto length = *content_length;
     if (*kind != 0)
     {
-        free(content_length);
         throw WrapperException::Last_error();
     }
-    free(content_length);
 
     return std::make_unique<RespRawData>(RespRawData::DataType::BYTES, ptr, length);
 }
@@ -324,16 +320,14 @@ uint64_t Response::content_length()
 
 RespRawData::uptr Response::copy_to()
 {
-    auto content_length = (uint64_t *)malloc(sizeof(uint64_t));
+    auto content_length = std::make_unique<uint64_t>(0);
     if (!content_length)
     {
         return {};
     }
-    *content_length = 0;
 
-    const uint8_t *ptr = ffi::response_copy_to(this, content_length);
+    const uint8_t *ptr = ffi::response_copy_to(this, content_length.get());
     auto length = *content_length;
-    free(content_length);
 
     return std::make_unique<RespRawData>(RespRawData::DataType::BYTES, ptr, length);
 }

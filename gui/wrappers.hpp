@@ -541,7 +541,7 @@ struct Response
     /// and with malformed sequences replaced with the REPLACEMENT CHARACTER.
     /// Encoding is determined from the `charset` parameter of `Content-Type` header,
     /// and defaults to `utf-8` if not presented.
-    std::unique_ptr<RespRaw> text_content(uint32_t *kind, int32_t *value);
+    std::unique_ptr<RespRaw> text(uint32_t *kind, int32_t *value);
 
     /// Get the response text given a specific encoding.
     ///
@@ -556,7 +556,7 @@ struct Response
 
     /// Get the full response body as `Bytes`.
     /// The difference from copy_to is : This fun Consumption ownership
-    std::unique_ptr<RespRaw> bytes_content(uint32_t *kind, int32_t *value);
+    std::unique_ptr<RespRaw> bytes(uint32_t *kind, int32_t *value);
 
     /// todo extensions.
     /// Get the content-length of the response, if it is known.

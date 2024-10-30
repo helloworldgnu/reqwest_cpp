@@ -33,7 +33,7 @@ pub unsafe extern "C" fn response_text(
         return ptr::null_mut();
     }
 
-    let mut resp = Box::from_raw(response);
+    let resp = Box::from_raw(response);
     let result = resp.text();
     match result {
         Ok(v) => {
@@ -167,18 +167,15 @@ pub unsafe extern "C" fn response_bytes(
     kind: *mut u32,
     value: *mut i32,
 ) -> *const u8 {
-    if response.is_null() || length.is_null() {
-        if !length.is_null() {
-            *kind = 1001;
-        }
-
-        update_last_error(anyhow!("response is null when use bytes"));
-        return ptr::null();
-    }
-
     *length = 0;
     *kind = 0;
     *value = 0;
+
+    if response.is_null() {
+        *kind = 1001;
+        update_last_error(anyhow!("response is null when use bytes"));
+        return ptr::null();
+    }
 
     let r_response = Box::from_raw(response);
     match r_response.bytes() {
@@ -212,8 +209,16 @@ pub unsafe extern "C" fn response_bytes(
 pub unsafe extern "C" fn response_text_with_charset(
     response: *mut Response,
     default_encoding: *const c_char,
-) -> *const c_char {
+    length: *mut u64,
+    kind: *mut u32,
+    value: *mut i32,
+) -> *const u8 {
+    *length = 0;
+    *kind = 0;
+    *value = 0;
+
     if response.is_null() {
+        *kind = 1001;
         update_last_error(anyhow!("response is null when use bytes"));
         return ptr::null();
     }
@@ -222,18 +227,27 @@ pub unsafe extern "C" fn response_text_with_charset(
         match to_rust_str(default_encoding, "default_encoding parse to str failed") {
             Some(v) => v,
             None => {
+                *kind = 1009;
                 return ptr::null();
             }
         };
+
     let r_response = Box::from_raw(response);
-    let res = match r_response.text_with_charset(r_default_encoding) {
-        Ok(v) => v.to_string(),
-        Err(e) => {
-            update_last_error(Error::new(e));
-            return ptr::null();
+    match r_response.text_with_charset(r_default_encoding) {
+        Ok(v) => {
+            *length = v.len() as u64;
+
+            let ptr = v.as_ptr();
+            std::mem::forget(v);
+
+            ptr
         }
-    };
-    CString::new(res).unwrap().into_raw()
+        Err(e) => {
+            utils::parse_err(&e, kind, value);
+            update_last_error(Error::new(e));
+            ptr::null()
+        }
+    }
 }
 
 /// Copy the response body into a writer.

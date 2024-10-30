@@ -584,8 +584,11 @@ const uint8_t *response_text(Response *response, uint64_t *length, uint32_t *kin
 /// about the possible encoding name, please go to [`encoding_rs`] docs.
 ///
 /// [`encoding_rs`]: https://docs.rs/encoding_rs/0.8/encoding_rs/#relationship-with-windows-code-pages
-const char *response_text_with_charset(Response *response,
-                                       const char *default_encoding);
+const uint8_t *response_text_with_charset(Response *response,
+                                          const char *default_encoding,
+                                          uint64_t *length,
+                                          uint32_t *kind,
+                                          int32_t *value);
 
 /// Get the final `Url` of this `Response`.
 const char *response_url(Response *response);

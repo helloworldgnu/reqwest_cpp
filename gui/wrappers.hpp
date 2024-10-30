@@ -16,7 +16,7 @@ namespace ffi
 enum ErrKind : uint32_t
 {
     EK_None = 0,
-    EK_Unknown = 1001,
+    EK_INVALID_PARAM = 1001,
     EK_TimeOut = 1002,
     EK_Builder = 1003,
     EK_Request = 1004,
@@ -24,12 +24,13 @@ enum ErrKind : uint32_t
     EK_Status = 1006,
     EK_Body = 1007,
     EK_Decode = 1008,
+    EK_INVALID_CHARSET = 1009,
 };
 
 enum IOErrKind : uint32_t
 {
     IO_EK_None = 0,
-    IO_EK_Unknown = 2001,
+    IO_EK_INVALID_PARAM = 2001,
     IO_EK_TimeOut = 2002,
     IO_EK_ConnectionRefused = 2003,
     IO_EK_ConnectionReset = 2004,
@@ -551,7 +552,7 @@ struct Response
     /// about the possible encoding name, please go to [`encoding_rs`] docs.
     ///
     /// [`encoding_rs`]: https://docs.rs/encoding_rs/0.8/encoding_rs/#relationship-with-windows-code-pages
-    std::string text_with_charset_and_destroy(const std::string &default_encoding);
+    std::unique_ptr<RespRaw> text_with_charset(uint32_t *kind, int32_t *value, const std::string &default_encoding);
 
     /// Get the full response body as `Bytes`.
     /// The difference from copy_to is : This fun Consumption ownership

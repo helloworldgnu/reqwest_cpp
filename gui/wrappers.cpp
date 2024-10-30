@@ -278,17 +278,32 @@ void Response::destroy()
 RespRaw::uptr Response::text_content(uint32_t *kind, int32_t *value)
 {
     auto length = std::make_unique<uint64_t>(0);
-    auto text = ffi::response_text(this, length.get(), kind, value);
+    auto ptr = ffi::response_text(this, length.get(), kind, value);
     if (*kind != 0)
     {
         throw WrapperException::Last_error();
     }
 
-    return RespRaw::create(text, *length);
+    return RespRaw::create(ptr, *length);
 }
 
-std::string Response::text_with_charset_and_destroy(const std::string &default_encoding){
-    RETURN_STRING_AND_FREE(ffi::response_text_with_charset(this, default_encoding.c_str()))}
+std::unique_ptr<RespRaw> Response::text_with_charset(uint32_t *kind, int32_t *value, const std::string &default_encoding)
+{
+    auto content_length = std::make_unique<uint64_t>(0);
+    if (!content_length)
+    {
+        return {};
+    }
+
+    auto ptr = ffi::response_text_with_charset(this, default_encoding.c_str(), content_length.get(), kind, value);
+    auto length = *content_length;
+    if (*kind != 0)
+    {
+        throw WrapperException::Last_error();
+    }
+
+    return RespRaw::create(ptr, length);
+}
 
 RespRaw::uptr Response::bytes_content(uint32_t *kind, int32_t *value)
 {
@@ -298,7 +313,7 @@ RespRaw::uptr Response::bytes_content(uint32_t *kind, int32_t *value)
         return {};
     }
 
-    const uint8_t *ptr = ffi::response_bytes(this, content_length.get(), kind, value);
+    auto ptr = ffi::response_bytes(this, content_length.get(), kind, value);
     auto length = *content_length;
     if (*kind != 0)
     {
@@ -329,7 +344,7 @@ RespRaw::uptr Response::copy_to()
         return {};
     }
 
-    const uint8_t *ptr = ffi::response_copy_to(this, content_length.get());
+    auto ptr = ffi::response_copy_to(this, content_length.get());
     auto length = *content_length;
 
     return RespRaw::create(ptr, length);

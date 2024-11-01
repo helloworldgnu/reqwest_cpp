@@ -2,11 +2,14 @@
 //! languages.
 
 use anyhow::{anyhow, Error};
-use libc::{c_char, c_int};
+use libc::{c_char, c_int, wchar_t};
 use std::cell::RefCell;
 use std::convert::From;
-use std::ffi::{CStr, CString};
+use std::ffi::{CStr, CString, OsString};
 use std::{ptr, slice, time::Duration, usize};
+
+#[cfg(target_os = "windows")]
+use std::os::windows::ffi::OsStringExt;
 
 thread_local! {
     static LAST_ERROR : RefCell<Option<Box<Error>>> = RefCell::new(None);
@@ -167,6 +170,26 @@ pub fn to_rust_str<'a>(ptr: *const c_char, err_tip: &'static str) -> Option<&'a 
             }
         }
     }
+}
+
+#[cfg(target_os = "windows")]
+pub fn to_rust_str_wide<'a>(ptr: *const wchar_t, length: usize) -> Option<OsString> {
+    if ptr.is_null() {
+        return None;
+    }
+
+    let mut len = length;
+    if len == 0 {
+        unsafe {
+            len = (0..).take_while(|&i| *ptr.offset(i) != 0).count();
+        }
+    }
+
+    let path_slice = unsafe {
+        std::slice::from_raw_parts(ptr, len)
+    };
+
+    Some(std::ffi::OsString::from_wide(path_slice))
 }
 
 pub fn u64_to_millos_duration(millisecond: *const u64) -> Option<Duration> {

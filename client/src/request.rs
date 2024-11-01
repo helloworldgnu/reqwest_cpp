@@ -1,6 +1,6 @@
 //use cookie::CookieJar;
 use anyhow::{anyhow, Error};
-use libc::c_char;
+use libc::{c_char, wchar_t};
 use reqwest::blocking::{Request, RequestBuilder, Response};
 use reqwest::header::HeaderMap;
 use std::{ptr, slice, time::Duration};
@@ -177,6 +177,39 @@ pub unsafe extern "C" fn request_builder_body_file(
 }
 
 /// Set the request body from file.
+#[cfg(target_os = "windows")]
+#[no_mangle]
+pub unsafe extern "C" fn request_builder_body_file_wide(
+    request_builder: *mut RequestBuilder,
+    file_path: *const wchar_t,
+    length: usize,
+) -> *mut RequestBuilder {
+    if request_builder.is_null() {
+        update_last_error(anyhow!("request_builder is null when use body"));
+        return ptr::null_mut();
+    }
+
+    let r_request_builder = Box::from_raw(request_builder);
+    let r_file_path = match to_rust_str_wide(file_path, length) {
+        Some(v) => v,
+        None => {
+            return ptr::null_mut();
+        }
+    };
+
+    let file = match std::fs::File::open(r_file_path) {
+        Ok(f) => f,
+        Err(e) => {
+            update_last_error(Error::new(e));
+            return ptr::null_mut();
+        }
+    };
+
+    let res = r_request_builder.body(file);
+    Box::into_raw(Box::new(res))
+}
+
+/// Set the request body from file.
 #[no_mangle]
 pub unsafe extern "C" fn request_builder_body_file_with_name(
     request_builder: *mut RequestBuilder,
@@ -184,6 +217,48 @@ pub unsafe extern "C" fn request_builder_body_file_with_name(
     file_path: *const c_char,
 ) -> *mut RequestBuilder {
     let r_file_path = match to_rust_str(file_path, "parse body string error") {
+        Some(v) => v,
+        None => {
+            return ptr::null_mut();
+        }
+    };
+
+    let r_file_name = match to_rust_str(file_name, "parse name string error") {
+        Some(v) => v,
+        None => {
+            return ptr::null_mut();
+        }
+    };
+
+    if request_builder.is_null() {
+        update_last_error(anyhow!("request_builder is null when use body"));
+        return ptr::null_mut();
+    }
+
+    let r_request_builder = Box::from_raw(request_builder);
+    let multi_part_file =
+        match reqwest::blocking::multipart::Form::new().file(r_file_name, r_file_path) {
+            Ok(f) => f,
+            Err(e) => {
+                update_last_error(Error::new(e));
+                return ptr::null_mut();
+            }
+        };
+
+    let res = r_request_builder.multipart(multi_part_file);
+    Box::into_raw(Box::new(res))
+}
+
+/// Set the request body from file.
+#[cfg(target_os = "windows")]
+#[no_mangle]
+pub unsafe extern "C" fn request_builder_body_file_with_name_wide(
+    request_builder: *mut RequestBuilder,
+    file_name: *const c_char,
+    file_path: *const wchar_t,
+    path_len: usize,
+) -> *mut RequestBuilder {
+    let r_file_path = match to_rust_str_wide(file_path, path_len) {
         Some(v) => v,
         None => {
             return ptr::null_mut();

@@ -462,9 +462,20 @@ RequestBuilder *request_builder_body_bytes(RequestBuilder *request_builder,
 RequestBuilder *request_builder_body_file(RequestBuilder *request_builder, const char *file_path);
 
 /// Set the request body from file.
+RequestBuilder *request_builder_body_file_wide(RequestBuilder *request_builder,
+                                               const wchar_t *file_path,
+                                               uintptr_t length);
+
+/// Set the request body from file.
 RequestBuilder *request_builder_body_file_with_name(RequestBuilder *request_builder,
                                                     const char *file_name,
                                                     const char *file_path);
+
+/// Set the request body from file.
+RequestBuilder *request_builder_body_file_with_name_wide(RequestBuilder *request_builder,
+                                                         const char *file_name,
+                                                         const wchar_t *file_path,
+                                                         uintptr_t path_len);
 
 /// Set the request body from UTF-8 text.
 RequestBuilder *request_builder_body_string(RequestBuilder *request_builder, const char *str);

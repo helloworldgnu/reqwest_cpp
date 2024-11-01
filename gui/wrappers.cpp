@@ -212,8 +212,18 @@ RequestBuilder *RequestBuilder::body(const std::vector<uint8_t> &bytes){RETURN_S
 
 RequestBuilder *RequestBuilder::file_body(const std::string &file_path){RETURN_SELF_NULL_THROW(ffi::request_builder_body_file(this, file_path.c_str()))}
 
+#if defined(_WIN32) || defined(_MSC_VER)
+RequestBuilder *RequestBuilder::file_body_wide(const std::wstring &file_path,
+                                               size_t pathSize){RETURN_SELF_NULL_THROW(ffi::request_builder_body_file_wide(this, file_path.c_str(), pathSize))}
+#endif
+
 RequestBuilder *RequestBuilder::file_body_with_name(const std::string &file_name, const std::string &file_path){
     RETURN_SELF_NULL_THROW(ffi::request_builder_body_file_with_name(this, file_name.c_str(), file_path.c_str()))}
+
+#if defined(_WIN32) || defined(_MSC_VER)
+RequestBuilder *RequestBuilder::file_body_with_name_wide(const std::string &file_name, const std::wstring &file_path, size_t pathSize){
+    RETURN_SELF_NULL_THROW(ffi::request_builder_body_file_with_name_wide(this, file_name.c_str(), file_path.c_str(), pathSize))}
+#endif
 
 RequestBuilder *RequestBuilder::body(const std::string &str){RETURN_SELF_NULL_THROW(ffi::request_builder_body_string(this, str.c_str()))}
 

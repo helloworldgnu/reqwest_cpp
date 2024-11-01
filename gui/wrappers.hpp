@@ -458,8 +458,13 @@ struct RequestBuilder
 
     /// Set the request body from file.
     RequestBuilder *file_body(const std::string &file_path);
+#if defined(_WIN32) || defined(_MSC_VER)
+    RequestBuilder *file_body_wide(const std::wstring &file_path, size_t pathSize);
+#endif
     RequestBuilder *file_body_with_name(const std::string &file_name, const std::string &file_path);
-
+#if defined(_WIN32) || defined(_MSC_VER)
+    RequestBuilder *file_body_with_name_wide(const std::string &file_name, const std::wstring &file_path, size_t pathSize);
+#endif
     /// Set the request body from UTF-8 text.
     RequestBuilder *body(const std::string &str);
 

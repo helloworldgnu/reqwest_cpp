@@ -1,4 +1,28 @@
-set(CMAKE_PREFIX_PATH "${QT_HOME}/lib/cmake")
+if(NOT DEFINED ENV{QT_HOME} )
+    message(FATAL_ERROR "FATAL: You need define QT_HOME with qt in environment.")
+elseif(ENV{QT_HOME} STREQUAL "" )
+    message(FATAL_ERROR "FATAL: You need set QT_HOME with qt in environment.")
+endif()
+set(QT_PATH "$ENV{QT_HOME}")
+
+message(STATUS "QT_PATH: ${QT_PATH}")
+
+if(CMAKE_PLATFORM_WINDOWS)
+    STRING(REPLACE "\\" "/" QT_PATH ${QT_PATH})
+endif()
+
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${QT_PATH}" )
+set(CMAKE_PREFIX_PATH ${CMAKE_PREFIX_PATH} "${QT_PATH}" )
+message(STATUS "CMAKE_MODULE_PATH: ${CMAKE_MODULE_PATH}")
+message(STATUS "CMAKE_PREFIX_PATH: ${CMAKE_PREFIX_PATH}")
+
+# check dir is exist
+function(check_dir_exist dir)
+    if(NOT EXISTS "${dir}" OR NOT IS_DIRECTORY "${dir}")
+        message(FATAL_ERROR "Qt path [${dir}] not exist")
+    endif()
+endfunction()
+check_dir_exist("${QT_PATH}")
 
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)

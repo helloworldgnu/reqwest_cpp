@@ -9,9 +9,9 @@
 #include <sys/types.h>
 #include <vector>
 
-#include "response_content.h"
+#include "code_shadow.hpp"
 
-namespace ffi
+namespace base::net::http
 {
 
 #define IF_NULL_THROW(value) value ? value : throw WrapperException::Last_error();
@@ -171,15 +171,15 @@ ClientBuilder *ClientBuilder::user_agent(const std::string &value){
 
 Client *ClientBuilder::build()
 {
-    RETURN_SELF_NULL_THROW(client_builder_build_client(this))
+    RETURN_SELF_NULL_THROW(ffi::client_builder_build_client(this))
 }
 
 void ClientBuilder::destroy()
 {
-    client_builder_destroy(this);
+    ffi::client_builder_destroy(this);
 }
 
-RequestBuilder *Client::get(const std::string &url){RETURN_SELF_NULL_THROW(client_get(this, url.c_str()))}
+RequestBuilder *Client::get(const std::string &url){RETURN_SELF_NULL_THROW(ffi::client_get(this, url.c_str()))}
 
 RequestBuilder *Client::delete_(const std::string &url){RETURN_SELF_NULL_THROW(ffi::client_delete(this, url.c_str()))}
 
@@ -236,9 +236,9 @@ RequestBuilder *RequestBuilder::form(const std::initializer_list<Pair> &pairs)
 }
 
 RequestBuilder *RequestBuilder::header(const std::string &key,
-                                       const std::string &value){RETURN_SELF_NULL_THROW(request_builder_header(this, key.c_str(), value.c_str()))}
+                                       const std::string &value){RETURN_SELF_NULL_THROW(ffi::request_builder_header(this, key.c_str(), value.c_str()))}
 
-RequestBuilder *RequestBuilder::headers(HeaderMap *headers){RETURN_SELF_NULL_THROW(request_builder_headers(this, headers))}
+RequestBuilder *RequestBuilder::headers(HeaderMap *headers){RETURN_SELF_NULL_THROW(ffi::request_builder_headers(this, headers))}
 
 RequestBuilder *RequestBuilder::json(const std::vector<Pair> &pairs){
     RETURN_SELF_NULL_THROW(ffi::request_builder_json(this, &pairs[0], pairs.size()))} RequestBuilder *RequestBuilder::json(const std::initializer_list<Pair> &pairs)
@@ -260,9 +260,9 @@ RequestBuilder *RequestBuilder::query(const std::vector<Pair> &querys){
     return this->query(tmp);
 }
 
-Response *RequestBuilder::send(uint32_t *kind, int32_t *value)
+Response *RequestBuilder::send()
 {
-    const auto resp = ffi::request_builder_send(this, kind, value);
+    const auto resp = ffi::request_builder_send(this);
     RETURN_SELF_NULL_THROW(resp);
 }
 
@@ -285,26 +285,13 @@ void Response::destroy()
     ffi::response_destroy(this);
 }
 
-RespRaw::uptr Response::text(uint32_t *kind, int32_t *value)
+std::unique_ptr<ByteBuffer> Response::text()
 {
-    auto content_length = std::make_unique<uint64_t>(0);
-    if (!content_length)
-    {
-        return {};
-    }
-
-    auto ptr = ffi::response_text(this, content_length.get(), kind, value);
-    auto length = *content_length;
-    auto resp = RespRaw::create(ptr, length);
-    if (*kind != 0)
-    {
-        throw WrapperException::Last_error();
-    }
-
-    return resp;
+    auto ptr = ffi::response_text(this );
+    return ptr;
 }
 
-std::unique_ptr<RespRaw> Response::text_with_charset(uint32_t *kind, int32_t *value, const std::string &default_encoding)
+std::unique_ptr<ByteBuffer> Response::text_with_charset(const std::string &default_encoding)
 {
     auto content_length = std::make_unique<uint64_t>(0);
     if (!content_length)
@@ -323,7 +310,7 @@ std::unique_ptr<RespRaw> Response::text_with_charset(uint32_t *kind, int32_t *va
     return resp;
 }
 
-RespRaw::uptr Response::bytes(uint32_t *kind, int32_t *value)
+std::unique_ptr<ByteBuffer> Response::bytes()
 {
     auto content_length = std::make_unique<uint64_t>(0);
     if (!content_length)
@@ -355,7 +342,7 @@ uint64_t Response::content_length()
     return length;
 }
 
-RespRaw::uptr Response::copy_to()
+std::unique_ptr<ByteBuffer> Response::copy_to()
 {
     auto content_length = std::make_unique<uint64_t>(0);
     if (!content_length)
@@ -484,4 +471,4 @@ void proxy::destroy(Proxy *p)
     proxy_reqwest_destroy(p);
 }
 
-} // namespace ffi
+} // namespace base::net::http

@@ -12,17 +12,15 @@ use utils;
 
 pub struct Response {
     pub(crate) inner: Option<reqwest::blocking::Response>,
-    pub(crate) body: Option<Vec<u8>>,
 
     pub(crate) error_kind: HttpErrorKind,
     pub(crate) err_msg: String,
 }
 
 impl Response {
-    pub fn new(inner: Option<reqwest::blocking::Response>, body: Option<Vec<u8>>, error_kind: HttpErrorKind, err_msg: String) -> Self {
+    pub fn new(inner: Option<reqwest::blocking::Response>, error_kind: HttpErrorKind, err_msg: String) -> Self {
         Self {
             inner,
-            body,
 
             error_kind,
             err_msg,
@@ -109,10 +107,10 @@ pub extern "C" fn resp_err_clear(handle: *mut Response) {
 #[no_mangle]
 pub unsafe extern "C" fn response_text(
     handle: *mut Response,
-) {
+) -> *mut ByteBuffer {
     if handle.is_null() {
         update_last_error(anyhow!("response is null when use text"));
-        return;
+        return ptr::null_mut();
     }
 
     let mut resp = Box::from_raw(handle);
@@ -121,14 +119,15 @@ pub unsafe extern "C" fn response_text(
         resp.err_msg = "response is null when use text".to_string();
 
         Box::leak(resp);
-        return;
+        return ptr::null_mut();
     }
 
     let result = resp.inner.take();
-    if let Some(r) = result {
+    let ret = if let Some(r) = result {
         match r.text() {
             Ok(v) => {
-                resp.body = Some(v.into_bytes());
+                let buf = ByteBuffer::new(v.into_bytes());
+                Box::into_raw(Box::new(buf))
             }
             Err(e) => {
                 let mut kind = HttpErrorKind::NoError;
@@ -136,11 +135,123 @@ pub unsafe extern "C" fn response_text(
 
                 resp.error_kind = kind;
                 resp.err_msg = e.to_string();
+
+                ptr::null_mut()
             }
         }
-    }
+    } else {
+        ptr::null_mut()
+    };
 
     Box::leak(resp);
+
+    ret
+}
+
+/// Get the response text given a specific encoding.
+///
+/// This method decodes the response body with BOM sniffing
+/// and with malformed sequences replaced with the REPLACEMENT CHARACTER.
+/// You can provide a default encoding for decoding the raw message, while the
+/// `charset` parameter of `Content-Type` header is still prioritized. For more information
+/// about the possible encoding name, please go to [`encoding_rs`] docs.
+///
+/// [`encoding_rs`]: https://docs.rs/encoding_rs/0.8/encoding_rs/#relationship-with-windows-code-pages
+#[no_mangle]
+pub unsafe extern "C" fn response_text_with_charset(
+    handle: *mut Response,
+    default_encoding: *const c_char,
+) -> *mut ByteBuffer {
+    if handle.is_null() {
+        update_last_error(anyhow!("response is null when use text_with_charset"));
+        return ptr::null_mut();
+    }
+
+    let mut resp = Box::from_raw(handle);
+    if let Some(r) = resp.inner.take() {
+        let r_default_encoding =
+            match to_rust_str(default_encoding, "default_encoding parse to str failed") {
+                Some(v) => v,
+                None => {
+                    resp.error_kind = HttpErrorKind::InvalidData;
+                    resp.err_msg = "default_encoding parse to str failed".to_string();
+
+                    Box::leak(resp);
+
+                    return ptr::null_mut();
+                }
+            };
+
+        match r.text_with_charset(r_default_encoding) {
+            Ok(v) => {
+                let buffer = ByteBuffer { inner: v.into_bytes() };
+                Box::leak(resp);
+
+                Box::into_raw(Box::new(buffer))
+            }
+            Err(e) => {
+                let mut kind = HttpErrorKind::NoError;
+                utils::parse_err(&e, &mut kind);
+
+                resp.error_kind = kind;
+                resp.err_msg = e.to_string();
+
+                Box::leak(resp);
+
+                ptr::null_mut()
+            }
+        }
+    } else {
+        resp.error_kind = HttpErrorKind::InvalidData;
+        resp.err_msg = "response is null when use text_with_charset".to_string();
+
+        Box::leak(resp);
+
+        ptr::null_mut()
+    }
+}
+
+/// Get the full response body as `Bytes`.
+/// The difference from copy_to is : This fun Consumption ownership
+/// Don't forget free
+#[no_mangle]
+pub unsafe extern "C" fn response_bytes(
+    handle: *mut Response,
+) -> *mut ByteBuffer {
+    if handle.is_null() {
+        update_last_error(anyhow!("response is null when use bytes"));
+        return ptr::null_mut();
+    }
+
+    let mut resp = Box::from_raw(handle);
+    let buf = if let Some(r) = resp.inner.take() {
+        match r.bytes() {
+            Ok(b) => {
+                let v = b.to_vec();
+                let buffer = ByteBuffer::new(v);
+
+                Box::into_raw(Box::new(buffer))
+            }
+            Err(e) => {
+                let mut kind = HttpErrorKind::NoError;
+                utils::parse_err(&e, &mut kind);
+
+                resp.error_kind = kind;
+                resp.err_msg = e.to_string();
+
+                ptr::null_mut()
+            }
+        }
+    } else {
+        resp.error_kind = HttpErrorKind::InvalidData;
+        resp.err_msg = "response is null when use bytes".to_string();
+
+        ptr::null_mut()
+    };
+
+    Box::leak(resp);
+
+    buf
 }
 
 /// Get the `StatusCode` of this `Response`.
@@ -352,114 +463,6 @@ pub unsafe extern "C" fn response_content_length(handle: *mut Response) -> u64 {
     }
 }
 
-/// Get the full response body as `Bytes`.
-/// The difference from copy_to is : This fun Consumption ownership
-/// Don't forget free
-#[no_mangle]
-pub unsafe extern "C" fn response_bytes(
-    handle: *mut Response,
-) -> *mut ByteBuffer {
-    if handle.is_null() {
-        update_last_error(anyhow!("response is null when use bytes"));
-        return ptr::null_mut();
-    }
-
-    let mut resp = Box::from_raw(handle);
-    if let Some(r) = resp.inner.take() {
-        match r.bytes() {
-            Ok(b) => {
-                let v = b.to_vec();
-                let buffer = ByteBuffer { inner: v };
-
-                Box::leak(resp);
-
-                Box::into_raw(Box::new(buffer))
-            }
-            Err(e) => {
-                let mut kind = HttpErrorKind::NoError;
-                utils::parse_err(&e, &mut kind);
-
-                resp.error_kind = kind;
-                resp.err_msg = e.to_string();
-
-                Box::leak(resp);
-
-                ptr::null_mut()
-            }
-        }
-    } else {
-        resp.error_kind = HttpErrorKind::InvalidData;
-        resp.err_msg = "response is null when use bytes".to_string();
-
-        Box::leak(resp);
-
-        ptr::null_mut()
-    }
-}
-
-/// Get the response text given a specific encoding.
-///
-/// This method decodes the response body with BOM sniffing
-/// and with malformed sequences replaced with the REPLACEMENT CHARACTER.
-/// You can provide a default encoding for decoding the raw message, while the
-/// `charset` parameter of `Content-Type` header is still prioritized. For more information
-/// about the possible encoding name, please go to [`encoding_rs`] docs.
-///
-/// [`encoding_rs`]: https://docs.rs/encoding_rs/0.8/encoding_rs/#relationship-with-windows-code-pages
-#[no_mangle]
-pub unsafe extern "C" fn response_text_with_charset(
-    handle: *mut Response,
-    default_encoding: *const c_char,
-) -> *mut ByteBuffer {
-    if handle.is_null() {
-        update_last_error(anyhow!("response is null when use text_with_charset"));
-        return ptr::null_mut();
-    }
-
-    let mut resp = Box::from_raw(handle);
-    if let Some(r) = resp.inner.take() {
-        let r_default_encoding =
-            match to_rust_str(default_encoding, "default_encoding parse to str failed") {
-                Some(v) => v,
-                None => {
-                    resp.error_kind = HttpErrorKind::InvalidData;
-                    resp.err_msg = "default_encoding parse to str failed".to_string();
-
-                    Box::leak(resp);
-
-                    return ptr::null_mut();
-                }
-            };
-
-        match r.text_with_charset(r_default_encoding) {
-            Ok(v) => {
-                let buffer = ByteBuffer { inner: v.into_bytes() };
-                Box::leak(resp);
-
-                Box::into_raw(Box::new(buffer))
-            }
-            Err(e) => {
-                let mut kind = HttpErrorKind::NoError;
-                utils::parse_err(&e, &mut kind);
-
-                resp.error_kind = kind;
-                resp.err_msg = e.to_string();
-
-                Box::leak(resp);
-
-                ptr::null_mut()
-            }
-        }
-    } else {
-        resp.error_kind = HttpErrorKind::InvalidData;
-        resp.err_msg = "response is null when use text_with_charset".to_string();
-
-        Box::leak(resp);
-
-        ptr::null_mut()
-    }
-}
-
 /// Copy the response body into a writer.
 /// Don't forget free
 ///
@@ -470,10 +473,10 @@ pub unsafe extern "C" fn response_text_with_charset(
 ///
 /// [`std::io::copy`]: https://doc.rust-lang.org/std/io/fn.copy.html
 #[no_mangle]
-pub unsafe extern "C" fn response_copy_to(handle: *mut Response) -> *const ByteBuffer {
+pub unsafe extern "C" fn response_copy_to(handle: *mut Response) -> *mut ByteBuffer {
     if handle.is_null() {
         update_last_error(anyhow!("response is null when use copy_to"));
-        return ptr::null();
+        return ptr::null_mut();
     }
 
     let mut resp = Box::from_raw(handle);
@@ -496,7 +499,7 @@ pub unsafe extern "C" fn response_copy_to(handle: *mut Response) -> *const ByteB
 
                 Box::leak(resp);
 
-                ptr::null()
+                ptr::null_mut()
             }
         }
     } else {
@@ -505,7 +508,7 @@ pub unsafe extern "C" fn response_copy_to(handle: *mut Response) -> *const ByteB
 
         Box::leak(resp);
 
-        ptr::null()
+        ptr::null_mut()
     }
 }
 

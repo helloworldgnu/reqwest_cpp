@@ -458,14 +458,14 @@ pub unsafe extern "C" fn request_builder_send(
     let result = r_request_builder.send();
     match result {
         Ok(r) => {
-            let resp = response::Response::new(Some(r), None, HttpErrorKind::NoError, String::default());
+            let resp = response::Response::new(Some(r), HttpErrorKind::NoError, String::default());
             Box::into_raw(Box::new(resp))
         }
         Err(e) => {
             let mut kind = HttpErrorKind::NoError;
             utils::parse_err(&e, &mut kind);
 
-            let resp = response::Response::new(None, None, kind, String::default());
+            let resp = response::Response::new(None, kind, String::default());
             Box::into_raw(Box::new(resp))
         }
     }

@@ -39,7 +39,6 @@ set(SOURCE main.cpp
         main_window.cpp main_window.hpp
         wrappers.cpp wrappers.hpp
         client.hpp
-        response_content.cpp
 )
 
 add_executable(gui ${SOURCE})

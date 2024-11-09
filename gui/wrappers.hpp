@@ -10,32 +10,13 @@
 
 #include "ffi.hpp"
 
-namespace ffi
+namespace
 {
+class ByteBuffer;
+}
 
-enum ErrKind : uint32_t
+namespace base::net::http
 {
-    EK_None = 0,
-    EK_INVALID_PARAM = 1001,
-    EK_TimeOut = 1002,
-    EK_Builder = 1003,
-    EK_Request = 1004,
-    EK_Redirect = 1005,
-    EK_Status = 1006,
-    EK_Body = 1007,
-    EK_Decode = 1008,
-    EK_INVALID_CHARSET = 1009,
-};
-
-enum IOErrKind : uint32_t
-{
-    IO_EK_None = 0,
-    IO_EK_INVALID_PARAM = 2001,
-    IO_EK_TimeOut = 2002,
-    IO_EK_ConnectionRefused = 2003,
-    IO_EK_ConnectionReset = 2004,
-    IO_EK_ConnectionAborted = 2005,
-};
 
 std::string last_error_message();
 
@@ -512,7 +493,7 @@ struct RequestBuilder
     ///
     /// This method fails if there was an error while sending request,
     /// redirect loop was detected or redirect limit was exhausted.
-    Response *send(uint32_t *kind, int32_t *value);
+    Response *send();
 
     /// Enables a request timeout.
     ///
@@ -538,7 +519,6 @@ struct RequestBuilder
     ~RequestBuilder() = delete;
 };
 
-class RespRaw;
 struct Response
 {
 
@@ -549,7 +529,7 @@ struct Response
     /// and with malformed sequences replaced with the REPLACEMENT CHARACTER.
     /// Encoding is determined from the `charset` parameter of `Content-Type` header,
     /// and defaults to `utf-8` if not presented.
-    std::unique_ptr<RespRaw> text(uint32_t *kind, int32_t *value);
+    std::unique_ptr<ByteBuffer> text(uint32_t *kind, int32_t *value);
 
     /// Get the response text given a specific encoding.
     ///
@@ -560,11 +540,11 @@ struct Response
     /// about the possible encoding name, please go to [`encoding_rs`] docs.
     ///
     /// [`encoding_rs`]: https://docs.rs/encoding_rs/0.8/encoding_rs/#relationship-with-windows-code-pages
-    std::unique_ptr<RespRaw> text_with_charset(uint32_t *kind, int32_t *value, const std::string &default_encoding);
+    std::unique_ptr<ByteBuffer> text_with_charset(uint32_t *kind, int32_t *value, const std::string &default_encoding);
 
     /// Get the full response body as `Bytes`.
     /// The difference from copy_to is : This fun Consumption ownership
-    std::unique_ptr<RespRaw> bytes(uint32_t *kind, int32_t *value);
+    std::unique_ptr<ByteBuffer> bytes(uint32_t *kind, int32_t *value);
 
     /// todo extensions.
     /// Get the content-length of the response, if it is known.
@@ -579,7 +559,7 @@ struct Response
     /// On success, the total number of bytes that were copied to `writer` is returned.
     ///
     /// [`std::io::copy`]: https://doc.rust-lang.org/std/io/fn.copy.html
-    std::unique_ptr<RespRaw> copy_to();
+    std::unique_ptr<ByteBuffer> copy_to();
 
     int32_t read(uint8_t *buf, uint32_t buf_len, uint32_t *kind);
 
@@ -620,4 +600,4 @@ Proxy *all(const std::string &proxy_scheme);
 void destroy(Proxy *p);
 }; // namespace proxy
 
-} // namespace ffi
+} // namespace base::net::http

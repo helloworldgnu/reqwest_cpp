@@ -1,12 +1,12 @@
 //use cookie::CookieJar;
+use crate::ffi::*;
 use anyhow::{anyhow, Error};
 use libc::{c_char, wchar_t};
-use reqwest::blocking::{Request, RequestBuilder, Response};
+use reqwest::blocking::{Request, RequestBuilder};
 use reqwest::header::HeaderMap;
+use response;
 use std::{ptr, slice, time::Duration};
-
-use crate::ffi::*;
-
+use http_err::HttpErrorKind;
 use crate::utils;
 
 /// Add a `Header` to this Request.
@@ -448,15 +448,8 @@ pub unsafe extern "C" fn request_builder_build(
 #[no_mangle]
 pub unsafe extern "C" fn request_builder_send(
     request_builder: *mut RequestBuilder,
-    kind: *mut u32,
-    value: *mut i32,
-) -> *mut Response {
-    *kind = 0;
-    *value = 0;
-
+) -> *mut response::Response {
     if request_builder.is_null() {
-        *kind = 1001;
-
         update_last_error(anyhow!("request_builder is null when use send"));
         return ptr::null_mut();
     }
@@ -464,14 +457,16 @@ pub unsafe extern "C" fn request_builder_send(
     let r_request_builder = Box::from_raw(request_builder);
     let result = r_request_builder.send();
     match result {
-        Ok(r) => Box::into_raw(Box::new(r)),
+        Ok(r) => {
+            let resp = response::Response::new(Some(r), None, HttpErrorKind::NoError, String::default());
+            Box::into_raw(Box::new(resp))
+        }
         Err(e) => {
-            utils::parse_err(&e, kind, value);
+            let mut kind = HttpErrorKind::NoError;
+            utils::parse_err(&e, &mut kind);
 
-            let err = Error::new(e);
-            update_last_error(err);
-
-            ptr::null_mut()
+            let resp = response::Response::new(None, None, kind, String::default());
+            Box::into_raw(Box::new(resp))
         }
     }
 }

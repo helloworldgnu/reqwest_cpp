@@ -185,9 +185,7 @@ pub fn to_rust_str_wide<'a>(ptr: *const wchar_t, length: usize) -> Option<OsStri
         }
     }
 
-    let path_slice = unsafe {
-        std::slice::from_raw_parts(ptr, len)
-    };
+    let path_slice = unsafe { std::slice::from_raw_parts(ptr, len) };
 
     Some(std::ffi::OsString::from_wide(path_slice))
 }

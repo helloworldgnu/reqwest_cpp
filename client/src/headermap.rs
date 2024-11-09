@@ -1,7 +1,7 @@
 use anyhow::{anyhow, Error};
 use libc::c_char;
 use reqwest::header::{HeaderMap, HeaderValue};
-use std::ffi::CString;
+use std::ffi::{CString};
 use std::ptr;
 
 use crate::ffi::*;
@@ -48,9 +48,23 @@ pub unsafe extern "C" fn header_map_insert(
             return false;
         }
     };
-    match (&mut *header_map).insert(r_key, r_value.parse().unwrap()) {
+
+    let value: HeaderValue = match HeaderValue::from_str(r_value) {
+        Ok(v) => { v }
+        Err(e) => {
+            let err = format!("{r_value} convert to header failed. {e}");
+            update_last_error(anyhow!(err));
+            return false;
+        }
+    };
+
+    match (&mut *header_map).insert(r_key, value) {
         Some(_) => true,
-        None => false,
+        None => {
+            let err = format!("{r_key} insert failed");
+            update_last_error(anyhow!(err));
+            false
+        }
     }
 }
 
@@ -86,7 +100,17 @@ pub unsafe extern "C" fn header_map_append(
             return false;
         }
     };
-    (&mut *header_map).append(r_key, r_value.parse().unwrap())
+
+    let value: HeaderValue = match HeaderValue::from_str(r_value) {
+        Ok(v) => { v }
+        Err(e) => {
+            let err = format!("{r_value} convert to header failed. {e}");
+            update_last_error(anyhow!(err));
+            return false;
+        }
+    };
+
+    (&mut *header_map).append(r_key, value)
 }
 
 /// Removes a key from the map, returning the value associated with the key.
@@ -140,10 +164,17 @@ pub unsafe extern "C" fn header_map_get(
                     return ptr::null();
                 }
             };
-            CString::new(str).unwrap().into_raw()
+
+            match CString::new(str) {
+                Ok(v) => { v.into_raw() }
+                Err(e) => {
+                    update_last_error(anyhow!(e));
+                    ptr::null()
+                }
+            }
         }
         None => {
-            return ptr::null();
+            ptr::null()
         }
     }
 }
@@ -240,8 +271,31 @@ pub unsafe extern "C" fn header_map_get_all(
             return ptr::null();
         }
     };
-    let r_value: Vec<&HeaderValue> = (*header_map).get_all(r_key).iter().collect();
-    CString::new(format!("{:?}", r_value)).unwrap().into_raw()
+
+    let mut value: String = String::default();
+
+
+    let all_values = (*header_map).get_all(r_key);
+    for v in all_values {
+        match v.to_str() {
+            Ok(v) => {
+                value.push_str(v);
+                value.push(';');
+            }
+            _ => {}
+        }
+    }
+    if value.ends_with(';') {
+        value.pop();
+    }
+
+    match CString::new(value) {
+        Ok(v) => { v.into_raw() }
+        Err(e) => {
+            update_last_error(anyhow!("header_map value convert failed. {e}"));
+            ptr::null()
+        }
+    }
 }
 
 /// Returns true if the map contains a value for the specified key.
@@ -277,12 +331,25 @@ pub unsafe extern "C" fn header_map_keys(header_map: *const HeaderMap) -> *const
         return ptr::null();
     }
 
-    let r_value: Vec<&str> = (*header_map)
-        .keys()
-        .into_iter()
-        .map(|v| v.as_str())
-        .collect();
-    CString::new(format!("{:?}", r_value)).unwrap().into_raw()
+    let mut keys: String = String::default();
+
+    let all_keys = (*header_map)
+        .keys();
+    for v in all_keys {
+        keys.push_str(v.as_str());
+        keys.push(';');
+    }
+    if keys.ends_with(';') {
+        keys.pop();
+    }
+
+    match CString::new(keys) {
+        Ok(v) => { v.into_raw() }
+        Err(e) => {
+            update_last_error(anyhow!(e));
+            ptr::null()
+        }
+    }
 }
 
 //TODO get values array-string
@@ -299,7 +366,13 @@ pub unsafe extern "C" fn header_map_values(header_map: *const HeaderMap) -> *con
         .map(|v| v.to_str().unwrap_or_else(|_| "opaque"))
         .collect();
 
-    CString::new(format!("{:?}", r_value)).unwrap().into_raw()
+    match CString::new(format!("{:?}", r_value)) {
+        Ok(v) => { v.into_raw() }
+        Err(e) => {
+            update_last_error(anyhow!(e));
+            ptr::null()
+        }
+    }
 }
 
 #[no_mangle]

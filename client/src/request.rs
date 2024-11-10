@@ -76,7 +76,8 @@ pub unsafe extern "C" fn request_builder_basic_auth(
         }
     };
 
-    let r_password = to_rust_str(password, "parse username error");
+    let r_password = to_rust_str(password, "parse password error");
+
     let r_request_builder = Box::from_raw(request_builder);
     let res = r_request_builder.basic_auth(r_username, r_password);
     Box::into_raw(Box::new(res))

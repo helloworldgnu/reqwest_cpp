@@ -279,10 +279,10 @@ pub unsafe extern "C" fn response_status(handle: *mut Response) -> i32 {
 
 /// Get the `Headers` of this `Response`.
 #[no_mangle]
-pub unsafe extern "C" fn response_headers(handle: *mut Response) -> *const HeaderMap {
+pub unsafe extern "C" fn response_headers(handle: *mut Response) -> *mut HeaderMap {
     if handle.is_null() {
         update_last_error(anyhow!("response is null when use headers"));
-        return ptr::null();
+        return ptr::null_mut();
     }
 
     let mut resp = Box::from_raw(handle);
@@ -297,7 +297,7 @@ pub unsafe extern "C" fn response_headers(handle: *mut Response) -> *const Heade
 
         Box::leak(resp);
 
-        ptr::null()
+        ptr::null_mut()
     }
 }
 

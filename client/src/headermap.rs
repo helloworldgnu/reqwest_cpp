@@ -306,21 +306,20 @@ pub unsafe extern "C" fn header_map_get_all(
 pub unsafe extern "C" fn header_map_contains_key(
     header_map: *const HeaderMap,
     key: *const c_char,
-    bk: *mut bool,
-) -> i32 {
-    if header_map.is_null() || bk.is_null() {
+) -> bool {
+    if header_map.is_null() {
         update_last_error(anyhow!("header_map is null"));
-        return -1;
+        return false;
     }
 
     let r_key = match to_rust_str(key, "parse key error") {
         Some(v) => v,
         None => {
-            return -1;
+            return false;
         }
     };
-    *bk = (*header_map).contains_key(r_key);
-    0
+
+    (*header_map).contains_key(r_key)
 }
 
 //TODO get keys array-string
@@ -376,9 +375,9 @@ pub unsafe extern "C" fn header_map_values(header_map: *const HeaderMap) -> *con
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn header_map_destroy(header_map: *const HeaderMap) {
+pub unsafe extern "C" fn header_map_destroy(header_map: *mut HeaderMap) {
     if header_map.is_null() {
         return;
     }
-    drop(Box::from_raw(header_map as *mut HeaderMap))
+    drop(Box::from_raw(header_map));
 }

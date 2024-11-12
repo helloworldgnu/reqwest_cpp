@@ -1,10 +1,10 @@
 use chrono::Local;
 use fern;
+use http_err::HttpErrorKind;
 use log::LevelFilter;
 use reqwest;
-use std::{error::Error, sync::Once};
 use std::io::ErrorKind;
-use http_err::HttpErrorKind;
+use std::{error::Error, sync::Once};
 
 /// Initialize the global logger and log to `rest_client.log`.
 ///
@@ -35,19 +35,19 @@ pub extern "C" fn initialize_logging() {
 
 pub(crate) unsafe fn parse_err(err: &reqwest::Error, kind: &mut HttpErrorKind) {
     if err.is_timeout() {
-        *kind = HttpErrorKind::HttpTimeOutErr;
+        *kind = HttpErrorKind::HttpTimeout;
     } else if err.is_status() {
-        *kind = HttpErrorKind::HttpStatusErr;
+        *kind = HttpErrorKind::HttpStatus;
     } else if err.is_builder() {
-        *kind = HttpErrorKind::HttpBuilderErr;
+        *kind = HttpErrorKind::HttpBuilder;
     } else if err.is_request() {
-        *kind = HttpErrorKind::HttpRequestErr;
+        *kind = HttpErrorKind::HttpRequest;
     } else if err.is_redirect() {
-        *kind = HttpErrorKind::HttpRedirectErr;
+        *kind = HttpErrorKind::HttpRedirect;
     } else if err.is_body() {
-        *kind = HttpErrorKind::HttpBodyErr;
+        *kind = HttpErrorKind::HttpBody;
     } else if err.is_decode() {
-        *kind = HttpErrorKind::HttpDecodeErr;
+        *kind = HttpErrorKind::HttpDecode;
     } else {
         *kind = HttpErrorKind::Other;
 
@@ -67,23 +67,43 @@ pub(crate) unsafe fn parse_io_err(err: &std::io::Error, kind: &mut HttpErrorKind
         ErrorKind::NotFound => {
             *kind = HttpErrorKind::NotFound;
         }
-        ErrorKind::PermissionDenied => { *kind = HttpErrorKind::PermissionDenied; }
-        ErrorKind::ConnectionRefused => { *kind = HttpErrorKind::ConnectionRefused; }
-        ErrorKind::ConnectionReset => { *kind = HttpErrorKind::ConnectionReset; }
+        ErrorKind::PermissionDenied => {
+            *kind = HttpErrorKind::PermissionDenied;
+        }
+        ErrorKind::ConnectionRefused => {
+            *kind = HttpErrorKind::ConnectionRefused;
+        }
+        ErrorKind::ConnectionReset => {
+            *kind = HttpErrorKind::ConnectionReset;
+        }
         /*
         ErrorKind::HostUnreachable => { *kind = HttpErrorKind::HostUnreachable; }
         ErrorKind::NetworkUnreachable => { *kind = HttpErrorKind::NetworkUnreachable; }
         */
-        ErrorKind::ConnectionAborted => { *kind = HttpErrorKind::ConnectionAborted; }
-        ErrorKind::NotConnected => { *kind = HttpErrorKind::NotConnected; }
-        ErrorKind::AddrInUse => { *kind = HttpErrorKind::AddrInUse; }
-        ErrorKind::AddrNotAvailable => { *kind = HttpErrorKind::AddrNotAvailable; }
+        ErrorKind::ConnectionAborted => {
+            *kind = HttpErrorKind::ConnectionAborted;
+        }
+        ErrorKind::NotConnected => {
+            *kind = HttpErrorKind::NotConnected;
+        }
+        ErrorKind::AddrInUse => {
+            *kind = HttpErrorKind::AddrInUse;
+        }
+        ErrorKind::AddrNotAvailable => {
+            *kind = HttpErrorKind::AddrNotAvailable;
+        }
         /*
         ErrorKind::NetworkDown => { *kind = HttpErrorKind::NetworkDown; }
         */
-        ErrorKind::BrokenPipe => { *kind = HttpErrorKind::BrokenPipe; }
-        ErrorKind::AlreadyExists => { *kind = HttpErrorKind::AlreadyExists; }
-        ErrorKind::WouldBlock => { *kind = HttpErrorKind::WouldBlock; }
+        ErrorKind::BrokenPipe => {
+            *kind = HttpErrorKind::BrokenPipe;
+        }
+        ErrorKind::AlreadyExists => {
+            *kind = HttpErrorKind::AlreadyExists;
+        }
+        ErrorKind::WouldBlock => {
+            *kind = HttpErrorKind::WouldBlock;
+        }
         /*
         ErrorKind::NotADirectory => { *kind = HttpErrorKind::NotADirectory; }
         ErrorKind::IsADirectory => { *kind = HttpErrorKind::IsADirectory; }
@@ -92,10 +112,18 @@ pub(crate) unsafe fn parse_io_err(err: &std::io::Error, kind: &mut HttpErrorKind
         ErrorKind::FilesystemLoop => { *kind = HttpErrorKind::FilesystemLoop; }
         ErrorKind::StaleNetworkFileHandle => { *kind = HttpErrorKind::StaleNetworkFileHandle; }
         */
-        ErrorKind::InvalidInput => { *kind = HttpErrorKind::InvalidInput; }
-        ErrorKind::InvalidData => { *kind = HttpErrorKind::InvalidData; }
-        ErrorKind::TimedOut => { *kind = HttpErrorKind::TimedOut; }
-        ErrorKind::WriteZero => { *kind = HttpErrorKind::WriteZero; }
+        ErrorKind::InvalidInput => {
+            *kind = HttpErrorKind::InvalidInput;
+        }
+        ErrorKind::InvalidData => {
+            *kind = HttpErrorKind::InvalidData;
+        }
+        ErrorKind::TimedOut => {
+            *kind = HttpErrorKind::TimedOut;
+        }
+        ErrorKind::WriteZero => {
+            *kind = HttpErrorKind::WriteZero;
+        }
         /*
         ErrorKind::StorageFull => { *kind = HttpErrorKind::StorageFull; }
         ErrorKind::NotSeekable => { *kind = HttpErrorKind::NotSeekable; }
@@ -109,11 +137,21 @@ pub(crate) unsafe fn parse_io_err(err: &std::io::Error, kind: &mut HttpErrorKind
         ErrorKind::InvalidFilename => { *kind = HttpErrorKind::InvalidFilename; }
         ErrorKind::ArgumentListTooLong => { *kind = HttpErrorKind::ArgumentListTooLong; }
          */
-        ErrorKind::Interrupted => { *kind = HttpErrorKind::Interrupted; }
-        ErrorKind::Unsupported => { *kind = HttpErrorKind::Unsupported; }
-        ErrorKind::UnexpectedEof => { *kind = HttpErrorKind::UnexpectedEof; }
-        ErrorKind::OutOfMemory => { *kind = HttpErrorKind::OutOfMemory; }
-        ErrorKind::Other => { *kind = HttpErrorKind::Other; }
+        ErrorKind::Interrupted => {
+            *kind = HttpErrorKind::Interrupted;
+        }
+        ErrorKind::Unsupported => {
+            *kind = HttpErrorKind::Unsupported;
+        }
+        ErrorKind::UnexpectedEof => {
+            *kind = HttpErrorKind::UnexpectedEof;
+        }
+        ErrorKind::OutOfMemory => {
+            *kind = HttpErrorKind::OutOfMemory;
+        }
+        ErrorKind::Other => {
+            *kind = HttpErrorKind::Other;
+        }
         /*
         ErrorKind::Uncategorized => { *kind = HttpErrorKind::Uncategorized; }
          */

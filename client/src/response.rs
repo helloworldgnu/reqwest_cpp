@@ -1,101 +1,22 @@
-use anyhow::{anyhow};
+use crate::ffi::*;
+use anyhow::anyhow;
+use http_err::HttpErrorKind;
 use libc::c_char;
 use reqwest::header::HeaderMap;
 use reqwest::Version;
-use std::ffi::{CString};
+use resp_body::RespBody;
+use rust_string::RString;
 use std::{mem, ptr};
-use byte_buffer::ByteBuffer;
-use http_err::HttpErrorKind;
-use crate::ffi::*;
-
 use utils;
 
 pub struct Response {
     pub(crate) inner: Option<reqwest::blocking::Response>,
-
-    pub(crate) error_kind: HttpErrorKind,
-    pub(crate) err_msg: String,
 }
 
 impl Response {
-    pub fn new(inner: Option<reqwest::blocking::Response>, error_kind: HttpErrorKind, err_msg: String) -> Self {
-        Self {
-            inner,
-
-            error_kind,
-            err_msg,
-        }
+    pub fn new(inner: Option<reqwest::blocking::Response>) -> Self {
+        Self { inner }
     }
-
-    pub fn clear_error(&mut self) {
-        self.error_kind = HttpErrorKind::NoError;
-        self.err_msg = String::default();
-    }
-}
-
-#[no_mangle]
-pub extern "C" fn resp_err_kind(handle: *mut Response) -> HttpErrorKind {
-    if handle.is_null() {
-        return HttpErrorKind::InvalidInput;
-    }
-
-    let resp = unsafe {
-        Box::from_raw(handle)
-    };
-
-    let ret = resp.error_kind;
-    Box::leak(resp);
-
-    ret
-}
-
-#[no_mangle]
-pub extern "C" fn resp_err_msg_len(handle: *mut Response) -> u64 {
-    if handle.is_null() {
-        return 0;
-    }
-
-    let resp = unsafe {
-        Box::from_raw(handle)
-    };
-
-    let ret = resp.err_msg.len();
-
-    Box::leak(resp);
-
-    ret as u64
-}
-
-#[no_mangle]
-pub extern "C" fn resp_err_msg(handle: *mut Response) -> *const u8 {
-    if handle.is_null() {
-        return ptr::null();
-    }
-
-    let resp = unsafe {
-        Box::from_raw(handle)
-    };
-
-    let ret = resp.err_msg.as_ptr();
-
-    Box::leak(resp);
-
-    ret
-}
-
-#[no_mangle]
-pub extern "C" fn resp_err_clear(handle: *mut Response) {
-    if handle.is_null() {
-        return;
-    }
-
-    let mut resp = unsafe {
-        Box::from_raw(handle)
-    };
-
-    resp.clear_error();
-
-    Box::leak(resp);
 }
 
 /// Get the response text.
@@ -105,18 +26,21 @@ pub extern "C" fn resp_err_clear(handle: *mut Response) {
 /// Encoding is determined from the `charset` parameter of `Content-Type` header,
 /// and defaults to `utf-8` if not presented.
 #[no_mangle]
-pub unsafe extern "C" fn response_text(
-    handle: *mut Response,
-) -> *mut ByteBuffer {
+pub unsafe extern "C" fn response_body_text(handle: *mut Response) -> *mut RespBody {
     if handle.is_null() {
-        update_last_error(anyhow!("response is null when use text"));
+        update_last_error(
+            HttpErrorKind::HttpHandleNull,
+            anyhow!("response handle is null when use text"),
+        );
         return ptr::null_mut();
     }
 
     let mut resp = Box::from_raw(handle);
     if resp.inner.is_none() {
-        resp.error_kind = HttpErrorKind::InvalidData;
-        resp.err_msg = "response is null when use text".to_string();
+        update_last_error(
+            HttpErrorKind::InvalidData,
+            anyhow!("response is null when use text".to_string()),
+        );
 
         Box::leak(resp);
         return ptr::null_mut();
@@ -126,15 +50,14 @@ pub unsafe extern "C" fn response_text(
     let ret = if let Some(r) = result {
         match r.text() {
             Ok(v) => {
-                let buf = ByteBuffer::new(v.into_bytes());
+                let buf = RespBody::new(v.into_bytes());
                 Box::into_raw(Box::new(buf))
             }
             Err(e) => {
                 let mut kind = HttpErrorKind::NoError;
                 utils::parse_err(&e, &mut kind);
 
-                resp.error_kind = kind;
-                resp.err_msg = e.to_string();
+                update_last_error(kind, anyhow!(e));
 
                 ptr::null_mut()
             }
@@ -158,23 +81,28 @@ pub unsafe extern "C" fn response_text(
 ///
 /// [`encoding_rs`]: https://docs.rs/encoding_rs/0.8/encoding_rs/#relationship-with-windows-code-pages
 #[no_mangle]
-pub unsafe extern "C" fn response_text_with_charset(
+pub unsafe extern "C" fn response_body_text_with_charset(
     handle: *mut Response,
     default_encoding: *const c_char,
-) -> *mut ByteBuffer {
+) -> *mut RespBody {
     if handle.is_null() {
-        update_last_error(anyhow!("response is null when use text_with_charset"));
+        update_last_error(
+            HttpErrorKind::HttpHandleNull,
+            anyhow!("response handle is null when use text_with_charset"),
+        );
         return ptr::null_mut();
     }
 
     let mut resp = Box::from_raw(handle);
-    if let Some(r) = resp.inner.take() {
+    let ret = if let Some(r) = resp.inner.take() {
         let r_default_encoding =
             match to_rust_str(default_encoding, "default_encoding parse to str failed") {
                 Some(v) => v,
                 None => {
-                    resp.error_kind = HttpErrorKind::InvalidData;
-                    resp.err_msg = "default_encoding parse to str failed".to_string();
+                    update_last_error(
+                        HttpErrorKind::InvalidData,
+                        anyhow!("default_encoding parse to str failed".to_string()),
+                    );
 
                     Box::leak(resp);
 
@@ -184,8 +112,9 @@ pub unsafe extern "C" fn response_text_with_charset(
 
         match r.text_with_charset(r_default_encoding) {
             Ok(v) => {
-                let buffer = ByteBuffer { inner: v.into_bytes() };
-                Box::leak(resp);
+                let buffer = RespBody {
+                    inner: v.into_bytes(),
+                };
 
                 Box::into_raw(Box::new(buffer))
             }
@@ -193,33 +122,35 @@ pub unsafe extern "C" fn response_text_with_charset(
                 let mut kind = HttpErrorKind::NoError;
                 utils::parse_err(&e, &mut kind);
 
-                resp.error_kind = kind;
-                resp.err_msg = e.to_string();
-
-                Box::leak(resp);
+                update_last_error(kind, anyhow!(e));
 
                 ptr::null_mut()
             }
         }
     } else {
-        resp.error_kind = HttpErrorKind::InvalidData;
-        resp.err_msg = "response is null when use text_with_charset".to_string();
-
-        Box::leak(resp);
+        update_last_error(
+            HttpErrorKind::InvalidData,
+            anyhow!("response is null when use text_with_charset".to_string()),
+        );
 
         ptr::null_mut()
-    }
+    };
+
+    Box::leak(resp);
+
+    ret
 }
 
 /// Get the full response body as `Bytes`.
 /// The difference from copy_to is : This fun Consumption ownership
 /// Don't forget free
 #[no_mangle]
-pub unsafe extern "C" fn response_bytes(
-    handle: *mut Response,
-) -> *mut ByteBuffer {
+pub unsafe extern "C" fn response_bytes(handle: *mut Response) -> *mut RespBody {
     if handle.is_null() {
-        update_last_error(anyhow!("response is null when use bytes"));
+        update_last_error(
+            HttpErrorKind::HttpHandleNull,
+            anyhow!("response handle is null when use bytes".to_string()),
+        );
         return ptr::null_mut();
     }
 
@@ -228,7 +159,7 @@ pub unsafe extern "C" fn response_bytes(
         match r.bytes() {
             Ok(b) => {
                 let v = b.to_vec();
-                let buffer = ByteBuffer::new(v);
+                let buffer = RespBody::new(v);
 
                 Box::into_raw(Box::new(buffer))
             }
@@ -236,16 +167,16 @@ pub unsafe extern "C" fn response_bytes(
                 let mut kind = HttpErrorKind::NoError;
                 utils::parse_err(&e, &mut kind);
 
-                resp.error_kind = kind;
-                resp.err_msg = e.to_string();
+                update_last_error(kind, anyhow!(e));
 
                 ptr::null_mut()
             }
         }
     } else {
-        resp.error_kind = HttpErrorKind::InvalidData;
-        resp.err_msg = "response is null when use bytes".to_string();
-
+        update_last_error(
+            HttpErrorKind::InvalidData,
+            anyhow!("response is null when use bytes".to_string()),
+        );
         ptr::null_mut()
     };
 
@@ -258,17 +189,21 @@ pub unsafe extern "C" fn response_bytes(
 #[no_mangle]
 pub unsafe extern "C" fn response_status(handle: *mut Response) -> i32 {
     if handle.is_null() {
-        update_last_error(anyhow!("response is null when use status"));
+        update_last_error(
+            HttpErrorKind::HttpHandleNull,
+            anyhow!("response handle is null when use status".to_string()),
+        );
         return -1;
     }
 
-    let mut resp = Box::from_raw(handle);
+    let resp = Box::from_raw(handle);
     let status = if let Some(r) = &resp.inner {
         r.status().as_u16() as i32
     } else {
-        resp.error_kind = HttpErrorKind::InvalidData;
-        resp.err_msg = "response is null when use status".to_string();
-
+        update_last_error(
+            HttpErrorKind::InvalidData,
+            anyhow!("response is null when use status".to_string()),
+        );
         -1
     };
 
@@ -281,24 +216,30 @@ pub unsafe extern "C" fn response_status(handle: *mut Response) -> i32 {
 #[no_mangle]
 pub unsafe extern "C" fn response_headers(handle: *mut Response) -> *mut HeaderMap {
     if handle.is_null() {
-        update_last_error(anyhow!("response is null when use headers"));
+        update_last_error(
+            HttpErrorKind::HttpHandleNull,
+            anyhow!("response handle is null when use headers".to_string()),
+        );
         return ptr::null_mut();
     }
 
-    let mut resp = Box::from_raw(handle);
-    if let Some(r) = &resp.inner {
+    let resp = Box::from_raw(handle);
+    let ret = if let Some(r) = &resp.inner {
         let headers = r.headers().clone();
-        Box::leak(resp);
 
         Box::into_raw(Box::new(headers))
     } else {
-        resp.error_kind = HttpErrorKind::InvalidData;
-        resp.err_msg = "response is null when use headers".to_string();
-
-        Box::leak(resp);
+        update_last_error(
+            HttpErrorKind::InvalidData,
+            anyhow!("response is null when use headers".to_string()),
+        );
 
         ptr::null_mut()
-    }
+    };
+
+    Box::leak(resp);
+
+    ret
 }
 
 /// Get the HTTP `Version` of this `Response`.
@@ -310,14 +251,17 @@ pub unsafe extern "C" fn response_headers(handle: *mut Response) -> *mut HeaderM
 ///Version::HTTP_3 => "HTTP/3.0",
 ///_ => "unreachable"
 #[no_mangle]
-pub unsafe extern "C" fn response_version(handle: *mut Response) -> *const c_char {
+pub unsafe extern "C" fn response_version(handle: *mut Response) -> *mut RString {
     if handle.is_null() {
-        update_last_error(anyhow!("response is null when use version"));
-        return ptr::null();
+        update_last_error(
+            HttpErrorKind::HttpHandleNull,
+            anyhow!("response handle is null when use version".to_string()),
+        );
+        return ptr::null_mut();
     }
 
-    let mut resp = Box::from_raw(handle);
-    if let Some(r) = &resp.inner {
+    let resp = Box::from_raw(handle);
+    let ret = if let Some(r) = &resp.inner {
         let res = match r.version() {
             Version::HTTP_09 => "HTTP/0.9",
             Version::HTTP_10 => "HTTP/1.0",
@@ -327,140 +271,128 @@ pub unsafe extern "C" fn response_version(handle: *mut Response) -> *const c_cha
             _ => "unreachable",
         };
 
-        let ret = match CString::new(res) {
-            Ok(v) => { v.into_raw() }
-            Err(e) => {
-                resp.error_kind = HttpErrorKind::OutOfMemory;
-                resp.err_msg = e.to_string();
-
-                ptr::null()
-            }
-        };
-
-        Box::leak(resp);
-
-        ret
+        Box::into_raw(Box::new(RString::new(res.to_string())))
     } else {
-        resp.error_kind = HttpErrorKind::InvalidData;
-        resp.err_msg = "response is null when use version".to_string();
+        update_last_error(
+            HttpErrorKind::InvalidData,
+            anyhow!("response is null when use version".to_string()),
+        );
 
-        Box::leak(resp);
+        ptr::null_mut()
+    };
 
-        ptr::null()
-    }
+    Box::leak(resp);
+
+    ret
 }
 
 /// Get the final `Url` of this `Response`.
 #[no_mangle]
-pub unsafe extern "C" fn response_url(handle: *mut Response) -> *const c_char {
+pub unsafe extern "C" fn response_url(handle: *mut Response) -> *mut RString {
     if handle.is_null() {
-        update_last_error(anyhow!("response is null when use url"));
-        return ptr::null();
+        update_last_error(
+            HttpErrorKind::HttpHandleNull,
+            anyhow!("handle null when use url".to_string()),
+        );
+        return ptr::null_mut();
     }
 
-    let mut resp = Box::from_raw(handle);
-    if let Some(r) = &resp.inner {
+    let resp = Box::from_raw(handle);
+    let ret = if let Some(r) = &resp.inner {
         let res = r.url().to_string();
 
-        let ret = match CString::new(res) {
-            Ok(v) => { v.into_raw() }
-            Err(e) => {
-                resp.error_kind = HttpErrorKind::OutOfMemory;
-                resp.err_msg = e.to_string();
-
-                ptr::null()
-            }
-        };
-
-        Box::leak(resp);
-
-        ret
+        Box::into_raw(Box::new(RString::new(res)))
     } else {
-        resp.error_kind = HttpErrorKind::InvalidData;
-        resp.err_msg = "response is null when use headers".to_string();
+        update_last_error(
+            HttpErrorKind::InvalidData,
+            anyhow!("response is null when use url".to_string()),
+        );
 
-        Box::leak(resp);
+        ptr::null_mut()
+    };
 
-        ptr::null()
-    }
+    Box::leak(resp);
+
+    ret
 }
 
 /// Get the remote address used to get this `Response`.
 #[no_mangle]
-pub unsafe extern "C" fn response_remote_addr(handle: *mut Response) -> *const c_char {
+pub unsafe extern "C" fn response_remote_addr(handle: *mut Response) -> *mut RString {
     if handle.is_null() {
-        update_last_error(anyhow!("response is null when use remote_addr"));
-        return ptr::null();
+        update_last_error(
+            HttpErrorKind::HttpHandleNull,
+            anyhow!("handle is null when use remote_addr".to_string()),
+        );
+        return ptr::null_mut();
     }
 
-    let mut resp = Box::from_raw(handle);
-    if let Some(r) = &resp.inner {
+    let resp = Box::from_raw(handle);
+    let ret = if let Some(r) = &resp.inner {
         let res = match r.remote_addr() {
             Some(a) => a.to_string(),
             None => {
-                resp.error_kind = HttpErrorKind::InvalidData;
-                resp.err_msg = "response remote addr is empty".to_string();
-
+                update_last_error(
+                    HttpErrorKind::InvalidData,
+                    anyhow!("response remote addr is empty".to_string()),
+                );
                 Box::leak(resp);
-                return ptr::null();
+                return ptr::null_mut();
             }
         };
 
-        let ret = match CString::new(res) {
-            Ok(v) => { v.into_raw() }
-            Err(e) => {
-                resp.error_kind = HttpErrorKind::OutOfMemory;
-                resp.err_msg = e.to_string();
-
-                ptr::null()
-            }
-        };
-
-        Box::leak(resp);
-
-        ret
+        Box::into_raw(Box::new(RString::new(res)))
     } else {
-        resp.error_kind = HttpErrorKind::InvalidData;
-        resp.err_msg = "response is null when use remote_addr".to_string();
+        update_last_error(
+            HttpErrorKind::InvalidData,
+            anyhow!("response is null when use remote_addr".to_string()),
+        );
+        ptr::null_mut()
+    };
 
-        Box::leak(resp);
+    Box::leak(resp);
 
-        ptr::null()
-    }
+    ret
 }
 
 /// Get the content-length of the response, if it is known.
 #[no_mangle]
 pub unsafe extern "C" fn response_content_length(handle: *mut Response) -> u64 {
     if handle.is_null() {
-        update_last_error(anyhow!("response is null when use content_length"));
+        update_last_error(
+            HttpErrorKind::HttpHandleNull,
+            anyhow!("handle is null when use content_length".to_string()),
+        );
         return 0;
     }
 
-    let mut resp = Box::from_raw(handle);
-    if let Some(r) = &resp.inner {
+    let resp = Box::from_raw(handle);
+    let ret = if let Some(r) = &resp.inner {
         let res = match r.content_length() {
             Some(v) => v,
             None => {
-                resp.error_kind = HttpErrorKind::InvalidData;
-                resp.err_msg = "response content length is empty".to_string();
-
+                update_last_error(
+                    HttpErrorKind::InvalidData,
+                    anyhow!("response content length is empty".to_string()),
+                );
                 Box::leak(resp);
                 return 0;
             }
         };
 
-        Box::leak(resp);
-
         res
     } else {
-        resp.error_kind = HttpErrorKind::InvalidData;
-        resp.err_msg = "response is null when use content_length".to_string();
-
-        Box::leak(resp);
+        update_last_error(
+            HttpErrorKind::InvalidData,
+            anyhow!("response is null when use content_length".to_string()),
+        );
 
         0
-    }
+    };
+
+    Box::leak(resp);
+
+    ret
 }
 
 /// Copy the response body into a writer.
@@ -473,60 +405,59 @@ pub unsafe extern "C" fn response_content_length(handle: *mut Response) -> u64 {
 ///
 /// [`std::io::copy`]: https://doc.rust-lang.org/std/io/fn.copy.html
 #[no_mangle]
-pub unsafe extern "C" fn response_copy_to(handle: *mut Response) -> *mut ByteBuffer {
+pub unsafe extern "C" fn response_copy_to(handle: *mut Response) -> *mut RespBody {
     if handle.is_null() {
-        update_last_error(anyhow!("response is null when use copy_to"));
+        update_last_error(
+            HttpErrorKind::HttpHandleNull,
+            anyhow!("handle is null when use copy_to".to_string()),
+        );
         return ptr::null_mut();
     }
 
     let mut resp = Box::from_raw(handle);
-    if let Some(ref mut r) = resp.inner {
+    let ret = if let Some(ref mut r) = resp.inner {
         let mut buf: Vec<u8> = vec![];
         match r.copy_to(&mut buf) {
             Ok(_) => {
-                let buffer = ByteBuffer { inner: buf };
-
-                Box::leak(resp);
-
+                let buffer = RespBody { inner: buf };
                 Box::into_raw(Box::new(buffer))
             }
             Err(e) => {
                 let mut kind = HttpErrorKind::NoError;
                 utils::parse_err(&e, &mut kind);
 
-                resp.error_kind = kind;
-                resp.err_msg = e.to_string();
-
-                Box::leak(resp);
+                update_last_error(kind, anyhow!(e));
 
                 ptr::null_mut()
             }
         }
     } else {
-        resp.error_kind = HttpErrorKind::InvalidData;
-        resp.err_msg = "response is null when use copy_to".to_string();
-
-        Box::leak(resp);
-
+        update_last_error(
+            HttpErrorKind::InvalidData,
+            anyhow!("response is null when use copy_to".to_string()),
+        );
         ptr::null_mut()
-    }
+    };
+
+    Box::leak(resp);
+
+    ret
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn response_read(
-    response: *mut Response,
-    buf: *mut u8,
-    buf_len: u32,
-) -> i32 {
-    if response.is_null() {
-        update_last_error(anyhow!("response is null when use copy"));
+pub unsafe extern "C" fn response_read(handle: *mut Response, buf: *mut u8, buf_len: u32) -> i32 {
+    if handle.is_null() {
+        update_last_error(
+            HttpErrorKind::HttpHandleNull,
+            anyhow!("handle is null when use read".to_string()),
+        );
         return -1;
     }
 
     use std::io::Read;
 
-    let mut resp = Box::from_raw(response);
-    if let Some(r) = &mut resp.inner {
+    let mut resp = Box::from_raw(handle);
+    let ret = if let Some(r) = &mut resp.inner {
         let mut vec_buf = Vec::from_raw_parts(buf, buf_len as usize, buf_len as usize);
         let result = r.read(&mut vec_buf[..]);
 
@@ -538,40 +469,41 @@ pub unsafe extern "C" fn response_read(
                 let mut kind = HttpErrorKind::NoError;
                 utils::parse_io_err(&e, &mut kind);
 
-                resp.error_kind = kind;
-                resp.err_msg = e.to_string();
+                update_last_error(kind, anyhow!(e.to_string()));
 
                 if let Some(ref inner_err) = e.into_inner() {
                     if let Some(err) = inner_err.downcast_ref::<reqwest::Error>() {
                         let mut kind = HttpErrorKind::NoError;
                         utils::parse_err(&err, &mut kind);
 
-                        resp.error_kind = kind;
+                        update_last_error(kind, anyhow!(err.to_string()));
                     } else if let Some(err) = inner_err.downcast_ref::<std::io::Error>() {
                         let mut kind = HttpErrorKind::NoError;
                         utils::parse_io_err(&err, &mut kind);
 
-                        resp.error_kind = kind;
+                        update_last_error(kind, anyhow!(err.to_string()));
+                    } else {
+                        update_last_error(HttpErrorKind::Other, anyhow!(inner_err.to_string()));
                     }
-
-                    resp.err_msg = inner_err.to_string();
                 }
 
                 -1
             }
         };
 
-        Box::leak(resp);
-
         bytes_read
     } else {
-        resp.error_kind = HttpErrorKind::InvalidData;
-        resp.err_msg = "response is null when use read".to_string();
-
-        Box::leak(resp);
+        update_last_error(
+            HttpErrorKind::InvalidData,
+            anyhow!("response is null when use read".to_string()),
+        );
 
         -1
-    }
+    };
+
+    Box::leak(resp);
+
+    ret
 }
 
 #[no_mangle]

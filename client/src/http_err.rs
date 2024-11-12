@@ -179,12 +179,14 @@ pub enum HttpErrorKind {
     #[doc(hidden)]
     Uncategorized,
 
-    HttpTimeOutErr,
-    HttpBuilderErr,
-    HttpRequestErr,
-    HttpRedirectErr,
-    HttpStatusErr,
-    HttpBodyErr,
-    HttpDecodeErr,
-    HttpUpgradeErr,
+    HttpHandleNull,
+    CharConversion,
+    HttpTimeout,
+    HttpBuilder,
+    HttpRequest,
+    HttpRedirect,
+    HttpStatus,
+    HttpBody,
+    HttpDecode,
+    HttpUpgrade,
 }

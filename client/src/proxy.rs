@@ -1,14 +1,17 @@
+use crate::ffi::*;
 use anyhow::{anyhow, Error};
+use http_err::HttpErrorKind;
 use libc::c_char;
 use std::{ffi::CStr, ptr};
 
-use crate::ffi::*;
-
 /// Proxy all HTTP traffic to the passed URL.
 #[no_mangle]
-pub unsafe extern "C" fn proxy_reqwest_http(proxy_scheme: *const c_char) -> *mut reqwest::Proxy {
+pub unsafe extern "C" fn proxy_http(proxy_scheme: *const c_char) -> *mut reqwest::Proxy {
     if proxy_scheme.is_null() {
-        update_last_error(anyhow!("proxy_scheme is null"));
+        update_last_error(
+            HttpErrorKind::HttpHandleNull,
+            anyhow!("proxy_scheme is null"),
+        );
         return ptr::null_mut();
     }
 
@@ -22,7 +25,7 @@ pub unsafe extern "C" fn proxy_reqwest_http(proxy_scheme: *const c_char) -> *mut
     match result {
         Ok(p) => Box::into_raw(Box::new(p)),
         Err(e) => {
-            update_last_error(Error::new(e).context("proxy fail"));
+            update_last_error(HttpErrorKind::Other, Error::new(e).context("proxy fail"));
             ptr::null_mut()
         }
     }
@@ -30,9 +33,12 @@ pub unsafe extern "C" fn proxy_reqwest_http(proxy_scheme: *const c_char) -> *mut
 
 /// Proxy all HTTPS traffic to the passed URL.
 #[no_mangle]
-pub unsafe extern "C" fn proxy_reqwest_https(proxy_scheme: *const c_char) -> *mut reqwest::Proxy {
+pub unsafe extern "C" fn proxy_https(proxy_scheme: *const c_char) -> *mut reqwest::Proxy {
     if proxy_scheme.is_null() {
-        update_last_error(anyhow!("proxy_scheme is null"));
+        update_last_error(
+            HttpErrorKind::HttpHandleNull,
+            anyhow!("proxy_scheme is null"),
+        );
         return ptr::null_mut();
     }
 
@@ -46,7 +52,7 @@ pub unsafe extern "C" fn proxy_reqwest_https(proxy_scheme: *const c_char) -> *mu
     match result {
         Ok(p) => Box::into_raw(Box::new(p)),
         Err(e) => {
-            update_last_error(Error::new(e).context("proxy fail"));
+            update_last_error(HttpErrorKind::Other, Error::new(e).context("proxy fail"));
             ptr::null_mut()
         }
     }
@@ -54,9 +60,12 @@ pub unsafe extern "C" fn proxy_reqwest_https(proxy_scheme: *const c_char) -> *mu
 
 /// Proxy **all** traffic to the passed URL.
 #[no_mangle]
-pub unsafe extern "C" fn proxy_reqwest_all(proxy_scheme: *const c_char) -> *mut reqwest::Proxy {
+pub unsafe extern "C" fn proxy_all(proxy_scheme: *const c_char) -> *mut reqwest::Proxy {
     if proxy_scheme.is_null() {
-        update_last_error(anyhow!("proxy_scheme is null"));
+        update_last_error(
+            HttpErrorKind::HttpHandleNull,
+            anyhow!("proxy_scheme is null"),
+        );
         return ptr::null_mut();
     }
 
@@ -70,16 +79,16 @@ pub unsafe extern "C" fn proxy_reqwest_all(proxy_scheme: *const c_char) -> *mut 
     match result {
         Ok(p) => Box::into_raw(Box::new(p)),
         Err(e) => {
-            update_last_error(Error::new(e).context("proxy fail"));
+            update_last_error(HttpErrorKind::Other, Error::new(e).context("proxy fail"));
             ptr::null_mut()
         }
     }
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn proxy_reqwest_destroy(p: *mut reqwest::Proxy) {
-    if p.is_null() {
+pub unsafe extern "C" fn proxy_destroy(handle: *mut reqwest::Proxy) {
+    if handle.is_null() {
         return;
     }
-    drop(Box::from_raw(p));
+    drop(Box::from_raw(handle));
 }

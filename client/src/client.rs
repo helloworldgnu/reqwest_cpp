@@ -1,12 +1,12 @@
+use crate::ffi::*;
 use anyhow::{anyhow, Error};
+use http_err::HttpErrorKind;
 use libc::c_char;
 use reqwest::blocking::{Client, ClientBuilder, Request, RequestBuilder};
 use reqwest::header::HeaderMap;
 use reqwest::{redirect, Method, Url};
 use std::net::{IpAddr, SocketAddr};
 use std::{ptr, slice};
-
-use crate::ffi::*;
 
 /// Constructs a new `ClientBuilder`.
 #[no_mangle]
@@ -17,39 +17,48 @@ pub unsafe extern "C" fn new_client_builder() -> *mut ClientBuilder {
 /// Sets the default headers for every request.
 #[no_mangle]
 pub unsafe extern "C" fn client_builder_default_headers(
-    client_builder: *mut ClientBuilder,
-    headermap: *mut HeaderMap,
+    handle: *mut ClientBuilder,
+    header_map: *mut HeaderMap,
 ) -> *mut ClientBuilder {
-    if client_builder.is_null() {
-        update_last_error(anyhow!("client_builder is null when use default_headers"));
+    if handle.is_null() {
+        update_last_error(
+            HttpErrorKind::HttpHandleNull,
+            anyhow!("client_builder handle is null when use default_headers"),
+        );
         return ptr::null_mut();
     }
 
-    let r_client_builder = Box::from_raw(client_builder);
-    let result = r_client_builder.default_headers(*Box::from_raw(headermap));
+    let r_client_builder = Box::from_raw(handle);
+    let header_map = Box::from_raw(header_map);
+    let result = r_client_builder.default_headers(*header_map);
     Box::into_raw(Box::new(result))
 }
 
 /// Sets the `User-Agent` header to be used by this client.
 #[no_mangle]
 pub unsafe extern "C" fn client_builder_user_agent(
-    client_builder: *mut ClientBuilder,
+    handle: *mut ClientBuilder,
     value: *const c_char,
 ) -> *mut ClientBuilder {
-    //println!("addr of client_builder={:p}", client_builder);
-    if client_builder.is_null() {
-        update_last_error(anyhow!("user agent is null when use user_agent"));
+    if handle.is_null() {
+        update_last_error(
+            HttpErrorKind::HttpHandleNull,
+            anyhow!("user agent handle is null when use user_agent"),
+        );
         return ptr::null_mut();
     }
 
-    let r_value = to_rust_str(value, "").unwrap();
-    let r_client_builder: Box<ClientBuilder> = Box::from_raw(client_builder);
-    //println!("addr of r_client_builder={:p}", r_client_builder);  //r_client_builder also point
+    let r_value = match to_rust_str(value, "") {
+        None => {
+            return ptr::null_mut();
+        }
+        Some(v) => v,
+    };
 
+    let r_client_builder: Box<ClientBuilder> = Box::from_raw(handle);
     let result: ClientBuilder = r_client_builder.user_agent(r_value);
-    //println!("addr of r_client_builder after use user_agent={:p}", &result);
     let res = Box::into_raw(Box::new(result));
-    //println!("addr of client_builder into raw={:p}", res);
+
     res
 }
 
@@ -58,15 +67,18 @@ pub unsafe extern "C" fn client_builder_user_agent(
 /// Default will follow redirects up to a maximum of 10.
 #[no_mangle]
 pub unsafe extern "C" fn client_builder_redirect(
-    client_builder: *mut ClientBuilder,
+    handle: *mut ClientBuilder,
     policy: usize,
 ) -> *mut ClientBuilder {
-    if client_builder.is_null() {
-        update_last_error(anyhow!("client_builder is null when use redirect"));
+    if handle.is_null() {
+        update_last_error(
+            HttpErrorKind::HttpHandleNull,
+            anyhow!("client_builder handle is null when use redirect"),
+        );
         return ptr::null_mut();
     }
 
-    let r_client_builder = Box::from_raw(client_builder);
+    let r_client_builder = Box::from_raw(handle);
     let r_policy: redirect::Policy = redirect::Policy::limited(policy);
     let result = r_client_builder.redirect(r_policy);
     Box::into_raw(Box::new(result))
@@ -77,15 +89,18 @@ pub unsafe extern "C" fn client_builder_redirect(
 /// Default is `true`.
 #[no_mangle]
 pub unsafe extern "C" fn client_builder_referer(
-    client_builder: *mut ClientBuilder,
+    handle: *mut ClientBuilder,
     enable: bool,
 ) -> *mut ClientBuilder {
-    if client_builder.is_null() {
-        update_last_error(anyhow!("client_builder is null when use referer"));
+    if handle.is_null() {
+        update_last_error(
+            HttpErrorKind::HttpHandleNull,
+            anyhow!("client_builder handle is null when use referer"),
+        );
         return ptr::null_mut();
     }
 
-    let r_client_builder = Box::from_raw(client_builder);
+    let r_client_builder = Box::from_raw(handle);
     let result = r_client_builder.referer(enable);
     Box::into_raw(Box::new(result))
 }
@@ -99,15 +114,18 @@ pub unsafe extern "C" fn client_builder_referer(
 /// Adding a proxy will disable the automatic usage of the "system" proxy.
 #[no_mangle]
 pub unsafe extern "C" fn client_builder_proxy(
-    client_builder: *mut ClientBuilder,
+    handle: *mut ClientBuilder,
     proxy: *mut reqwest::Proxy,
 ) -> *mut ClientBuilder {
-    if client_builder.is_null() || proxy.is_null() {
-        update_last_error(anyhow!("client_builder or proxy is null"));
+    if handle.is_null() || proxy.is_null() {
+        update_last_error(
+            HttpErrorKind::HttpHandleNull,
+            anyhow!("client_builder handle or proxy is null"),
+        );
         return ptr::null_mut();
     }
 
-    let r_client_builder = Box::from_raw(client_builder);
+    let r_client_builder = Box::from_raw(handle);
     let result = r_client_builder.proxy(*Box::from_raw(proxy));
     Box::into_raw(Box::new(result))
 }
@@ -121,16 +139,19 @@ pub unsafe extern "C" fn client_builder_proxy(
 /// Pass `None` to disable timeout.
 #[no_mangle]
 pub unsafe extern "C" fn client_builder_timeout(
-    client_builder: *mut ClientBuilder,
+    handle: *mut ClientBuilder,
     millisecond: *const u64,
 ) -> *mut ClientBuilder {
-    if client_builder.is_null() {
-        update_last_error(anyhow!("client_builder is null when use timeout"));
+    if handle.is_null() {
+        update_last_error(
+            HttpErrorKind::HttpHandleNull,
+            anyhow!("client_builder handle is null when use timeout"),
+        );
         return ptr::null_mut();
     }
 
-    let r_client_builder = Box::from_raw(client_builder);
-    let result = r_client_builder.timeout(u64_to_millos_duration(millisecond));
+    let r_client_builder = Box::from_raw(handle);
+    let result = r_client_builder.timeout(u64_to_millis_duration(millisecond));
     Box::into_raw(Box::new(result))
 }
 
@@ -143,16 +164,19 @@ pub unsafe extern "C" fn client_builder_timeout(
 /// Pass `None` to disable timeout.
 #[no_mangle]
 pub unsafe extern "C" fn client_builder_connect_timeout(
-    client_builder: *mut ClientBuilder,
+    handle: *mut ClientBuilder,
     millisecond: *const u64,
 ) -> *mut ClientBuilder {
-    if client_builder.is_null() {
-        update_last_error(anyhow!("client_builder is null when use timeout"));
+    if handle.is_null() {
+        update_last_error(
+            HttpErrorKind::HttpHandleNull,
+            anyhow!("client_builder handle is null when use timeout"),
+        );
         return ptr::null_mut();
     }
 
-    let r_client_builder = Box::from_raw(client_builder);
-    let result = r_client_builder.connect_timeout(u64_to_millos_duration(millisecond));
+    let r_client_builder = Box::from_raw(handle);
+    let result = r_client_builder.connect_timeout(u64_to_millis_duration(millisecond));
     Box::into_raw(Box::new(result))
 }
 
@@ -165,16 +189,19 @@ pub unsafe extern "C" fn client_builder_connect_timeout(
 /// Default is 90 seconds.
 #[no_mangle]
 pub unsafe extern "C" fn client_builder_pool_idle_timeout(
-    client_builder: *mut ClientBuilder,
+    handle: *mut ClientBuilder,
     millisecond: *const u64,
 ) -> *mut ClientBuilder {
-    if client_builder.is_null() {
-        update_last_error(anyhow!("client_builder is null when use pool_idle_timeout"));
+    if handle.is_null() {
+        update_last_error(
+            HttpErrorKind::HttpHandleNull,
+            anyhow!("client_builder handle is null when use pool_idle_timeout"),
+        );
         return ptr::null_mut();
     }
 
-    let r_client_builder = Box::from_raw(client_builder);
-    let result = r_client_builder.pool_idle_timeout(u64_to_millos_duration(millisecond));
+    let r_client_builder = Box::from_raw(handle);
+    let result = r_client_builder.pool_idle_timeout(u64_to_millis_duration(millisecond));
 
     Box::into_raw(Box::new(result))
 }
@@ -182,17 +209,18 @@ pub unsafe extern "C" fn client_builder_pool_idle_timeout(
 /// Sets the maximum idle connection per host allowed in the pool.
 #[no_mangle]
 pub unsafe extern "C" fn client_builder_pool_max_idle_per_host(
-    client_builder: *mut ClientBuilder,
+    handle: *mut ClientBuilder,
     max: usize,
 ) -> *mut ClientBuilder {
-    if client_builder.is_null() {
-        update_last_error(anyhow!(
-            "client_builder is null when use pool_max_idle_per_host"
-        ));
+    if handle.is_null() {
+        update_last_error(
+            HttpErrorKind::HttpHandleNull,
+            anyhow!("client_builder handle is null when use pool_max_idle_per_host"),
+        );
         return ptr::null_mut();
     }
 
-    let r_client_builder = Box::from_raw(client_builder);
+    let r_client_builder = Box::from_raw(handle);
     let result = r_client_builder.pool_max_idle_per_host(max);
     Box::into_raw(Box::new(result))
 }
@@ -200,14 +228,17 @@ pub unsafe extern "C" fn client_builder_pool_max_idle_per_host(
 /// Sets the maximum idle connection per host allowed in the pool.
 #[no_mangle]
 pub unsafe extern "C" fn client_builder_http1_title_case_headers(
-    client_builder: *mut ClientBuilder,
+    handle: *mut ClientBuilder,
 ) -> *mut ClientBuilder {
-    if client_builder.is_null() {
-        update_last_error(anyhow!("client_builder is null when use timeout"));
+    if handle.is_null() {
+        update_last_error(
+            HttpErrorKind::HttpHandleNull,
+            anyhow!("client_builder handle is null when use timeout"),
+        );
         return ptr::null_mut();
     }
 
-    let r_client_builder = Box::from_raw(client_builder);
+    let r_client_builder = Box::from_raw(handle);
     let result = r_client_builder.http1_title_case_headers();
     Box::into_raw(Box::new(result))
 }
@@ -219,17 +250,17 @@ pub unsafe extern "C" fn client_builder_http1_title_case_headers(
 /// parsing.
 #[no_mangle]
 pub unsafe extern "C" fn client_builder_http1_allow_obsolete_multiline_headers_in_responses(
-    client_builder: *mut ClientBuilder,
+    handle: *mut ClientBuilder,
     val: bool,
 ) -> *mut ClientBuilder {
-    if client_builder.is_null() {
-        update_last_error(anyhow!(
-            "client_builder is null when use http1_allow_obsolete_multiline_headers_in_responses"
+    if handle.is_null() {
+        update_last_error(HttpErrorKind::HttpHandleNull, anyhow!(
+            "client_builder handle is null when use http1_allow_obsolete_multiline_headers_in_responses"
         ));
         return ptr::null_mut();
     }
 
-    let r_client_builder = Box::from_raw(client_builder);
+    let r_client_builder = Box::from_raw(handle);
     let result = r_client_builder.http1_allow_obsolete_multiline_headers_in_responses(val);
     Box::into_raw(Box::new(result))
 }
@@ -237,14 +268,17 @@ pub unsafe extern "C" fn client_builder_http1_allow_obsolete_multiline_headers_i
 /// Only use HTTP/1.
 #[no_mangle]
 pub unsafe extern "C" fn client_builder_http1_only(
-    client_builder: *mut ClientBuilder,
+    handle: *mut ClientBuilder,
 ) -> *mut ClientBuilder {
-    if client_builder.is_null() {
-        update_last_error(anyhow!("client_builder is null when use http1_only"));
+    if handle.is_null() {
+        update_last_error(
+            HttpErrorKind::HttpHandleNull,
+            anyhow!("client_builder handle is null when use http1_only"),
+        );
         return ptr::null_mut();
     }
 
-    let r_client_builder = Box::from_raw(client_builder);
+    let r_client_builder = Box::from_raw(handle);
     let result = r_client_builder.http1_only();
     Box::into_raw(Box::new(result))
 }
@@ -252,14 +286,17 @@ pub unsafe extern "C" fn client_builder_http1_only(
 /// Allow HTTP/0.9 responses
 #[no_mangle]
 pub unsafe extern "C" fn client_builder_http09_responses(
-    client_builder: *mut ClientBuilder,
+    handle: *mut ClientBuilder,
 ) -> *mut ClientBuilder {
-    if client_builder.is_null() {
-        update_last_error(anyhow!("client_builder is null when use http09_responses"));
+    if handle.is_null() {
+        update_last_error(
+            HttpErrorKind::HttpHandleNull,
+            anyhow!("client_builder handle is null when use http09_responses"),
+        );
         return ptr::null_mut();
     }
 
-    let r_client_builder = Box::from_raw(client_builder);
+    let r_client_builder = Box::from_raw(handle);
     let result = r_client_builder.http09_responses();
     Box::into_raw(Box::new(result))
 }
@@ -267,16 +304,17 @@ pub unsafe extern "C" fn client_builder_http09_responses(
 /// Only use HTTP/2.
 #[no_mangle]
 pub unsafe extern "C" fn client_builder_http2_prior_knowledge(
-    client_builder: *mut ClientBuilder,
+    handle: *mut ClientBuilder,
 ) -> *mut ClientBuilder {
-    if client_builder.is_null() {
-        update_last_error(anyhow!(
-            "client_builder is null when use http2_prior_knowledge"
-        ));
+    if handle.is_null() {
+        update_last_error(
+            HttpErrorKind::HttpHandleNull,
+            anyhow!("client_builder handle is null when use http2_prior_knowledge"),
+        );
         return ptr::null_mut();
     }
 
-    let r_client_builder = Box::from_raw(client_builder);
+    let r_client_builder = Box::from_raw(handle);
     let result = r_client_builder.http2_prior_knowledge();
     Box::into_raw(Box::new(result))
 }
@@ -286,17 +324,18 @@ pub unsafe extern "C" fn client_builder_http2_prior_knowledge(
 /// Default is currently 65,535 but may change internally to optimize for common uses.
 #[no_mangle]
 pub unsafe extern "C" fn client_builder_http2_initial_stream_window_size(
-    client_builder: *mut ClientBuilder,
+    handle: *mut ClientBuilder,
     size: *mut u32,
 ) -> *mut ClientBuilder {
-    if client_builder.is_null() {
-        update_last_error(anyhow!(
-            "client_builder is null when use http2_initial_stream_window_size"
-        ));
+    if handle.is_null() {
+        update_last_error(
+            HttpErrorKind::HttpHandleNull,
+            anyhow!("client_builder handle is null when use http2_initial_stream_window_size"),
+        );
         return ptr::null_mut();
     }
 
-    let r_client_builder = Box::from_raw(client_builder);
+    let r_client_builder = Box::from_raw(handle);
     let result = r_client_builder.http2_initial_stream_window_size(*size);
     Box::into_raw(Box::new(result))
 }
@@ -306,17 +345,18 @@ pub unsafe extern "C" fn client_builder_http2_initial_stream_window_size(
 /// Default is currently 65,535 but may change internally to optimize for common uses.
 #[no_mangle]
 pub unsafe extern "C" fn client_builder_http2_initial_connection_window_size(
-    client_builder: *mut ClientBuilder,
+    handle: *mut ClientBuilder,
     size: *mut u32,
 ) -> *mut ClientBuilder {
-    if client_builder.is_null() {
-        update_last_error(anyhow!(
-            "client_builder is null when use http2_initial_connection_window_size"
-        ));
+    if handle.is_null() {
+        update_last_error(
+            HttpErrorKind::HttpHandleNull,
+            anyhow!("client_builder handle is null when use http2_initial_connection_window_size"),
+        );
         return ptr::null_mut();
     }
 
-    let r_client_builder = Box::from_raw(client_builder);
+    let r_client_builder = Box::from_raw(handle);
     let result = r_client_builder.http2_initial_connection_window_size(*size);
     Box::into_raw(Box::new(result))
 }
@@ -327,17 +367,18 @@ pub unsafe extern "C" fn client_builder_http2_initial_connection_window_size(
 /// `http2_initial_connection_window_size`.
 #[no_mangle]
 pub unsafe extern "C" fn client_builder_http2_adaptive_window(
-    client_builder: *mut ClientBuilder,
+    handle: *mut ClientBuilder,
     enable: bool,
 ) -> *mut ClientBuilder {
-    if client_builder.is_null() {
-        update_last_error(anyhow!(
-            "client_builder is null when use http2_adaptive_window"
-        ));
+    if handle.is_null() {
+        update_last_error(
+            HttpErrorKind::HttpHandleNull,
+            anyhow!("client_builder handle is null when use http2_adaptive_window"),
+        );
         return ptr::null_mut();
     }
 
-    let r_client_builder = Box::from_raw(client_builder);
+    let r_client_builder = Box::from_raw(handle);
     let result = r_client_builder.http2_adaptive_window(enable);
     Box::into_raw(Box::new(result))
 }
@@ -347,17 +388,18 @@ pub unsafe extern "C" fn client_builder_http2_adaptive_window(
 /// Default is currently 16,384 but may change internally to optimize for common uses.
 #[no_mangle]
 pub unsafe extern "C" fn client_builder_http2_max_frame_size(
-    client_builder: *mut ClientBuilder,
+    handle: *mut ClientBuilder,
     size: *mut u32,
 ) -> *mut ClientBuilder {
-    if client_builder.is_null() {
-        update_last_error(anyhow!(
-            "client_builder is null when use http2_adaptive_window"
-        ));
+    if handle.is_null() {
+        update_last_error(
+            HttpErrorKind::HttpHandleNull,
+            anyhow!("client_builder handle is null when use http2_adaptive_window"),
+        );
         return ptr::null_mut();
     }
 
-    let r_client_builder = Box::from_raw(client_builder);
+    let r_client_builder = Box::from_raw(handle);
     let result = r_client_builder.http2_max_frame_size(*size);
     Box::into_raw(Box::new(result))
 }
@@ -369,17 +411,18 @@ pub unsafe extern "C" fn client_builder_http2_max_frame_size(
 /// Default is `true`.
 #[no_mangle]
 pub unsafe extern "C" fn client_builder_tcp_nodelay(
-    client_builder: *mut ClientBuilder,
+    handle: *mut ClientBuilder,
     enable: bool,
 ) -> *mut ClientBuilder {
-    if client_builder.is_null() {
-        update_last_error(anyhow!(
-            "client_builder is null when use http2_adaptive_window"
-        ));
+    if handle.is_null() {
+        update_last_error(
+            HttpErrorKind::HttpHandleNull,
+            anyhow!("client_builder handle is null when use http2_adaptive_window"),
+        );
         return ptr::null_mut();
     }
 
-    let r_client_builder = Box::from_raw(client_builder);
+    let r_client_builder = Box::from_raw(handle);
     let result = r_client_builder.tcp_nodelay(enable);
     Box::into_raw(Box::new(result))
 }
@@ -387,11 +430,14 @@ pub unsafe extern "C" fn client_builder_tcp_nodelay(
 /// Bind to a local IP Address.
 #[no_mangle]
 pub unsafe extern "C" fn client_builder_local_address(
-    client_builder: *mut ClientBuilder,
+    handle: *mut ClientBuilder,
     local_address: *const c_char,
 ) -> *mut ClientBuilder {
-    if client_builder.is_null() {
-        update_last_error(anyhow!("client_builder is null when use local_address"));
+    if handle.is_null() {
+        update_last_error(
+            HttpErrorKind::HttpHandleNull,
+            anyhow!("client_builder handle is null when use local_address"),
+        );
         return ptr::null_mut();
     }
 
@@ -407,12 +453,12 @@ pub unsafe extern "C" fn client_builder_local_address(
     match r_local_address_str.parse() {
         Ok(v) => r_local_address = v,
         Err(e) => {
-            update_last_error(Error::new(e).context("ip illegality"));
+            update_last_error(HttpErrorKind::Other, Error::new(e).context("ip illegality"));
             return ptr::null_mut();
         }
     }
 
-    let r_client_builder = Box::from_raw(client_builder);
+    let r_client_builder = Box::from_raw(handle);
     let result = r_client_builder.local_address(r_local_address);
     Box::into_raw(Box::new(result))
 }
@@ -422,16 +468,19 @@ pub unsafe extern "C" fn client_builder_local_address(
 /// If `None`, the option will not be set.
 #[no_mangle]
 pub unsafe extern "C" fn client_builder_tcp_keepalive(
-    client_builder: *mut ClientBuilder,
+    handle: *mut ClientBuilder,
     millisecond: *const u64,
 ) -> *mut ClientBuilder {
-    if client_builder.is_null() {
-        update_last_error(anyhow!("client_builder is null when use tcp_keepalive"));
+    if handle.is_null() {
+        update_last_error(
+            HttpErrorKind::HttpHandleNull,
+            anyhow!("client_builder handle is null when use tcp_keepalive"),
+        );
         return ptr::null_mut();
     }
 
-    let r_client_builder = Box::from_raw(client_builder);
-    let result = r_client_builder.tcp_keepalive(u64_to_millos_duration(millisecond));
+    let r_client_builder = Box::from_raw(handle);
+    let result = r_client_builder.tcp_keepalive(u64_to_millis_duration(millisecond));
 
     Box::into_raw(Box::new(result))
 }
@@ -445,13 +494,14 @@ pub unsafe extern "C" fn client_builder_tcp_keepalive(
 /// trusted store.
 #[no_mangle]
 pub unsafe extern "C" fn client_builder_add_root_certificate(
-    client_builder: *mut ClientBuilder,
+    handle: *mut ClientBuilder,
     cert_path: *const c_char,
 ) -> *mut ClientBuilder {
-    if client_builder.is_null() {
-        update_last_error(anyhow!(
-            "client_builder is null when use add_root_certificate"
-        ));
+    if handle.is_null() {
+        update_last_error(
+            HttpErrorKind::HttpHandleNull,
+            anyhow!("client_builder handle is null when use add_root_certificate"),
+        );
         return ptr::null_mut();
     }
 
@@ -466,18 +516,20 @@ pub unsafe extern "C" fn client_builder_add_root_certificate(
     let der = match std::fs::read(r_cert_path) {
         Ok(v) => v,
         Err(e) => {
-            update_last_error(Error::new(e));
+            update_last_error(HttpErrorKind::Other, Error::new(e));
             return ptr::null_mut();
         }
     };
+
     let cert = match reqwest::Certificate::from_der(&der) {
         Ok(v) => v,
         Err(e) => {
-            update_last_error(Error::new(e));
+            update_last_error(HttpErrorKind::Other, Error::new(e));
             return ptr::null_mut();
         }
     };
-    let r_client_builder = Box::from_raw(client_builder);
+
+    let r_client_builder = Box::from_raw(handle);
     Box::into_raw(Box::new(r_client_builder.add_root_certificate(cert)))
 }
 
@@ -491,17 +543,18 @@ pub unsafe extern "C" fn client_builder_add_root_certificate(
 /// feature to be enabled.
 #[no_mangle]
 pub unsafe extern "C" fn client_builder_tls_built_in_root_certs(
-    client_builder: *mut ClientBuilder,
+    handle: *mut ClientBuilder,
     tls_built_in_root_certs: bool,
 ) -> *mut ClientBuilder {
-    if client_builder.is_null() {
-        update_last_error(anyhow!(
-            "client_builder is null when use tls_built_in_root_certs"
-        ));
+    if handle.is_null() {
+        update_last_error(
+            HttpErrorKind::HttpHandleNull,
+            anyhow!("client_builder handle is null when use tls_built_in_root_certs"),
+        );
         return ptr::null_mut();
     }
 
-    let r_client_builder = Box::from_raw(client_builder);
+    let r_client_builder = Box::from_raw(handle);
     let result = r_client_builder.tls_built_in_root_certs(tls_built_in_root_certs);
     Box::into_raw(Box::new(result))
 }
@@ -519,17 +572,18 @@ pub unsafe extern "C" fn client_builder_tls_built_in_root_certs(
 /// as a last resort.
 #[no_mangle]
 pub unsafe extern "C" fn client_builder_danger_accept_invalid_certs(
-    client_builder: *mut ClientBuilder,
+    handle: *mut ClientBuilder,
     accept_invalid_certs: bool,
 ) -> *mut ClientBuilder {
-    if client_builder.is_null() {
-        update_last_error(anyhow!(
-            "client_builder is null when use danger_accept_invalid_certs"
-        ));
+    if handle.is_null() {
+        update_last_error(
+            HttpErrorKind::HttpHandleNull,
+            anyhow!("client_builder handle is null when use danger_accept_invalid_certs"),
+        );
         return ptr::null_mut();
     }
 
-    let r_client_builder = Box::from_raw(client_builder);
+    let r_client_builder = Box::from_raw(handle);
     let result = r_client_builder.danger_accept_invalid_certs(accept_invalid_certs);
     Box::into_raw(Box::new(result))
 }
@@ -539,17 +593,18 @@ pub unsafe extern "C" fn client_builder_danger_accept_invalid_certs(
 /// Defaults to `true`.
 #[no_mangle]
 pub unsafe extern "C" fn client_builder_tls_sni(
-    client_builder: *mut ClientBuilder,
+    handle: *mut ClientBuilder,
     tls_sni: bool,
 ) -> *mut ClientBuilder {
-    if client_builder.is_null() {
-        update_last_error(anyhow!(
-            "client_builder is null when use danger_accept_invalid_certs"
-        ));
+    if handle.is_null() {
+        update_last_error(
+            HttpErrorKind::HttpHandleNull,
+            anyhow!("client_builder handle is null when use danger_accept_invalid_certs"),
+        );
         return ptr::null_mut();
     }
 
-    let r_client_builder = Box::from_raw(client_builder);
+    let r_client_builder = Box::from_raw(handle);
     let result = r_client_builder.tls_sni(tls_sni);
     Box::into_raw(Box::new(result))
 }
@@ -571,13 +626,14 @@ pub unsafe extern "C" fn client_builder_tls_sni(
 /// feature to be enabled.
 #[no_mangle]
 pub unsafe extern "C" fn client_builder_min_tls_version(
-    client_builder: *mut ClientBuilder,
+    handle: *mut ClientBuilder,
     version: *const c_char,
 ) -> *mut ClientBuilder {
-    if client_builder.is_null() || version.is_null() {
-        update_last_error(anyhow!(
-            "client builder or version is null when use min_tls_version"
-        ));
+    if handle.is_null() || version.is_null() {
+        update_last_error(
+            HttpErrorKind::Other,
+            anyhow!("client_builder handle or version is null when use min_tls_version"),
+        );
         return ptr::null_mut();
     }
 
@@ -591,7 +647,7 @@ pub unsafe extern "C" fn client_builder_min_tls_version(
         }
     };
 
-    let result: ClientBuilder = Box::from_raw(client_builder).min_tls_version(r_version);
+    let result: ClientBuilder = Box::from_raw(handle).min_tls_version(r_version);
     Box::into_raw(Box::new(result))
 }
 
@@ -612,13 +668,14 @@ pub unsafe extern "C" fn client_builder_min_tls_version(
 /// feature to be enabled.
 #[no_mangle]
 pub unsafe extern "C" fn client_builder_max_tls_version(
-    client_builder: *mut ClientBuilder,
+    handle: *mut ClientBuilder,
     version: *const c_char,
 ) -> *mut ClientBuilder {
-    if client_builder.is_null() || version.is_null() {
-        update_last_error(anyhow!(
-            "client builder or version is null when use max_tls_version"
-        ));
+    if handle.is_null() || version.is_null() {
+        update_last_error(
+            HttpErrorKind::Other,
+            anyhow!("client_builder handle or version is null when use max_tls_version"),
+        );
         return ptr::null_mut();
     }
 
@@ -632,7 +689,7 @@ pub unsafe extern "C" fn client_builder_max_tls_version(
         }
     };
 
-    let result: ClientBuilder = Box::from_raw(client_builder).max_tls_version(r_version);
+    let result: ClientBuilder = Box::from_raw(handle).max_tls_version(r_version);
     Box::into_raw(Box::new(result))
 }
 
@@ -643,14 +700,17 @@ pub unsafe extern "C" fn client_builder_max_tls_version(
 /// even if another dependency were to enable the optional `trust-dns` feature.
 #[no_mangle]
 pub unsafe extern "C" fn client_builder_no_trust_dns(
-    client_builder: *mut ClientBuilder,
+    handle: *mut ClientBuilder,
 ) -> *mut ClientBuilder {
-    if client_builder.is_null() {
-        update_last_error(anyhow!("client_builder is null when use no_trust_dns"));
+    if handle.is_null() {
+        update_last_error(
+            HttpErrorKind::HttpHandleNull,
+            anyhow!("client_builder handle is null when use no_trust_dns"),
+        );
         return ptr::null_mut();
     }
 
-    let r_client_builder = Box::from_raw(client_builder);
+    let r_client_builder = Box::from_raw(handle);
     let result = r_client_builder.no_hickory_dns();
     Box::into_raw(Box::new(result))
 }
@@ -660,17 +720,18 @@ pub unsafe extern "C" fn client_builder_no_trust_dns(
 /// Defaults to false.
 #[no_mangle]
 pub unsafe extern "C" fn client_builder_https_only(
-    client_builder: *mut ClientBuilder,
+    handle: *mut ClientBuilder,
     enable: bool,
 ) -> *mut ClientBuilder {
-    if client_builder.is_null() {
-        update_last_error(anyhow!(
-            "client_builder is null when use http2_prior_knowledge"
-        ));
+    if handle.is_null() {
+        update_last_error(
+            HttpErrorKind::HttpHandleNull,
+            anyhow!("client_builder handle is null when use http2_prior_knowledge"),
+        );
         return ptr::null_mut();
     }
 
-    let r_client_builder = Box::from_raw(client_builder);
+    let r_client_builder = Box::from_raw(handle);
     let result = r_client_builder.https_only(enable);
     Box::into_raw(Box::new(result))
 }
@@ -685,12 +746,15 @@ pub unsafe extern "C" fn client_builder_https_only(
 /// to the conventional port for the given scheme (e.g. 80 for http).
 #[no_mangle]
 pub unsafe extern "C" fn client_builder_resolve(
-    client_builder: *mut ClientBuilder,
+    handle: *mut ClientBuilder,
     domain: *const c_char,
     socket_addr: *const c_char,
 ) -> *mut ClientBuilder {
-    if client_builder.is_null() {
-        update_last_error(anyhow!("client builder is null when use resolve"));
+    if handle.is_null() {
+        update_last_error(
+            HttpErrorKind::HttpHandleNull,
+            anyhow!("client builder handle is null when use resolve"),
+        );
         return ptr::null_mut();
     }
 
@@ -709,12 +773,15 @@ pub unsafe extern "C" fn client_builder_resolve(
     let r_socket_addr: SocketAddr = match r_socket_addr_str.parse() {
         Ok(v) => v,
         _ => {
-            update_last_error(anyhow!("{} parse fail", r_socket_addr_str));
+            update_last_error(
+                HttpErrorKind::Other,
+                anyhow!("{} parse fail", r_socket_addr_str),
+            );
             return ptr::null_mut();
         }
     };
 
-    let result = Box::from_raw(client_builder).resolve(r_domain, r_socket_addr);
+    let result = Box::from_raw(handle).resolve(r_domain, r_socket_addr);
     Box::into_raw(Box::new(result))
 }
 
@@ -728,13 +795,16 @@ pub unsafe extern "C" fn client_builder_resolve(
 /// to the conventional port for the given scheme (e.g. 80 for http).
 #[no_mangle]
 pub unsafe extern "C" fn client_builder_resolve_to_addrs(
-    client_builder: *mut ClientBuilder,
+    handle: *mut ClientBuilder,
     domain: *const c_char,
     socket_addr_array: *const *const c_char,
     len: usize,
 ) -> *mut ClientBuilder {
-    if client_builder.is_null() {
-        update_last_error(anyhow!("client builder is null when use resolve"));
+    if handle.is_null() {
+        update_last_error(
+            HttpErrorKind::HttpHandleNull,
+            anyhow!("client builder handle is null when use resolve"),
+        );
         return ptr::null_mut();
     }
 
@@ -758,22 +828,25 @@ pub unsafe extern "C" fn client_builder_resolve_to_addrs(
         let r_socket_addr: SocketAddr = match r_socket_addr_str.parse() {
             Ok(v) => v,
             _ => {
-                update_last_error(anyhow!("{} parse fail", r_socket_addr_str));
+                update_last_error(
+                    HttpErrorKind::Other,
+                    anyhow!("{} parse fail", r_socket_addr_str),
+                );
                 return ptr::null_mut();
             }
         };
         r_socket_addrs.push(r_socket_addr)
     }
 
-    let result = Box::from_raw(client_builder).resolve_to_addrs(r_domain, &r_socket_addrs);
+    let result = Box::from_raw(handle).resolve_to_addrs(r_domain, &r_socket_addrs);
     Box::into_raw(Box::new(result))
 }
 
 ///Generally not required
 #[no_mangle]
-pub unsafe extern "C" fn client_builder_destroy(client_builder: *mut ClientBuilder) {
-    if !client_builder.is_null() {
-        drop(Box::from_raw(client_builder));
+pub unsafe extern "C" fn client_builder_destroy(handle: *mut ClientBuilder) {
+    if !handle.is_null() {
+        drop(Box::from_raw(handle));
     }
 }
 
@@ -784,22 +857,21 @@ pub unsafe extern "C" fn client_builder_destroy(client_builder: *mut ClientBuild
 /// This method fails if TLS backend cannot be initialized, or the resolver
 /// cannot load the system configuration.
 #[no_mangle]
-pub unsafe extern "C" fn client_builder_build_client(
-    client_builder: *mut ClientBuilder,
-) -> *mut Client {
-    if client_builder.is_null() {
-        update_last_error(anyhow!(
-            "client builder is null when use client_builder_build_client"
-        ));
+pub unsafe extern "C" fn client_builder_build_client(handle: *mut ClientBuilder) -> *mut Client {
+    if handle.is_null() {
+        update_last_error(
+            HttpErrorKind::HttpHandleNull,
+            anyhow!("client builder handle is null when use client_builder_build_client"),
+        );
         return ptr::null_mut();
     }
 
-    let r_client_builder = Box::from_raw(client_builder);
+    let r_client_builder = Box::from_raw(handle);
     match r_client_builder.build() {
         Ok(c) => Box::into_raw(Box::new(c)),
         Err(e) => {
             let err = Error::new(e).context("Unable to build client");
-            update_last_error(err);
+            update_last_error(HttpErrorKind::Other, err);
             ptr::null_mut()
         }
     }
@@ -807,9 +879,9 @@ pub unsafe extern "C" fn client_builder_build_client(
 
 //It is usually necessary to use
 #[no_mangle]
-pub unsafe extern "C" fn client_destroy(client: *mut Client) {
-    if !client.is_null() {
-        drop(Box::from_raw(client));
+pub unsafe extern "C" fn client_destroy(handle: *mut Client) {
+    if !handle.is_null() {
+        drop(Box::from_raw(handle));
     }
 }
 
@@ -820,11 +892,14 @@ pub unsafe extern "C" fn client_destroy(client: *mut Client) {
 /// This method fails whenever supplied `Url` cannot be parsed.
 #[no_mangle]
 pub unsafe extern "C" fn client_get(
-    client: *mut Client,
+    handle: *mut Client,
     url: *const c_char,
 ) -> *mut RequestBuilder {
-    if client.is_null() {
-        update_last_error(anyhow!("client is null when use get"));
+    if handle.is_null() {
+        update_last_error(
+            HttpErrorKind::HttpHandleNull,
+            anyhow!("client handle is null when use get"),
+        );
         return ptr::null_mut();
     }
 
@@ -835,11 +910,11 @@ pub unsafe extern "C" fn client_get(
         }
     };
     if Url::parse(r_value).is_err() {
-        update_last_error(anyhow!("url illegality"));
+        update_last_error(HttpErrorKind::Other, anyhow!("url illegality"));
         return ptr::null_mut();
     }
 
-    let rb = (*client).get(r_value);
+    let rb = (*handle).get(r_value);
     Box::into_raw(Box::new(rb))
 }
 
@@ -850,11 +925,14 @@ pub unsafe extern "C" fn client_get(
 /// This method fails whenever supplied `Url` cannot be parsed.
 #[no_mangle]
 pub unsafe extern "C" fn client_post(
-    client: *mut Client,
+    handle: *mut Client,
     url: *const c_char,
 ) -> *mut RequestBuilder {
-    if client.is_null() {
-        update_last_error(anyhow!("client is null when use post"));
+    if handle.is_null() {
+        update_last_error(
+            HttpErrorKind::HttpHandleNull,
+            anyhow!("client handle is null when use post"),
+        );
         return ptr::null_mut();
     }
 
@@ -865,11 +943,11 @@ pub unsafe extern "C" fn client_post(
         }
     };
     if Url::parse(r_value).is_err() {
-        update_last_error(anyhow!("url illegality"));
+        update_last_error(HttpErrorKind::Other, anyhow!("url illegality"));
         return ptr::null_mut();
     }
 
-    let rb = (*client).post(r_value);
+    let rb = (*handle).post(r_value);
     Box::into_raw(Box::new(rb))
 }
 
@@ -880,11 +958,14 @@ pub unsafe extern "C" fn client_post(
 /// This method fails whenever supplied `Url` cannot be parsed.
 #[no_mangle]
 pub unsafe extern "C" fn client_put(
-    client: *mut Client,
+    handle: *mut Client,
     url: *const c_char,
 ) -> *mut RequestBuilder {
-    if client.is_null() {
-        update_last_error(anyhow!("client is null when use put"));
+    if handle.is_null() {
+        update_last_error(
+            HttpErrorKind::HttpHandleNull,
+            anyhow!("client handle is null when use put"),
+        );
         return ptr::null_mut();
     }
 
@@ -895,11 +976,11 @@ pub unsafe extern "C" fn client_put(
         }
     };
     if Url::parse(r_value).is_err() {
-        update_last_error(anyhow!("url illegality"));
+        update_last_error(HttpErrorKind::Other, anyhow!("url illegality"));
         return ptr::null_mut();
     }
 
-    let rb = (*client).put(r_value);
+    let rb = (*handle).put(r_value);
     Box::into_raw(Box::new(rb))
 }
 
@@ -910,11 +991,14 @@ pub unsafe extern "C" fn client_put(
 /// This method fails whenever supplied `Url` cannot be parsed.
 #[no_mangle]
 pub unsafe extern "C" fn client_patch(
-    client: *mut Client,
+    handle: *mut Client,
     url: *const c_char,
 ) -> *mut RequestBuilder {
-    if client.is_null() {
-        update_last_error(anyhow!("client is null when use put"));
+    if handle.is_null() {
+        update_last_error(
+            HttpErrorKind::HttpHandleNull,
+            anyhow!("client handle is null when use put"),
+        );
         return ptr::null_mut();
     }
 
@@ -925,11 +1009,11 @@ pub unsafe extern "C" fn client_patch(
         }
     };
     if Url::parse(r_value).is_err() {
-        update_last_error(anyhow!("url illegality"));
+        update_last_error(HttpErrorKind::Other, anyhow!("url illegality"));
         return ptr::null_mut();
     }
 
-    let rb = (*client).patch(r_value);
+    let rb = (*handle).patch(r_value);
     Box::into_raw(Box::new(rb))
 }
 
@@ -940,11 +1024,14 @@ pub unsafe extern "C" fn client_patch(
 /// This method fails whenever supplied `Url` cannot be parsed.
 #[no_mangle]
 pub unsafe extern "C" fn client_delete(
-    client: *mut Client,
+    handle: *mut Client,
     url: *const c_char,
 ) -> *mut RequestBuilder {
-    if client.is_null() {
-        update_last_error(anyhow!("client is null when use put"));
+    if handle.is_null() {
+        update_last_error(
+            HttpErrorKind::HttpHandleNull,
+            anyhow!("client handle is null when use put"),
+        );
         return ptr::null_mut();
     }
 
@@ -955,11 +1042,11 @@ pub unsafe extern "C" fn client_delete(
         }
     };
     if Url::parse(r_value).is_err() {
-        update_last_error(anyhow!("url illegality"));
+        update_last_error(HttpErrorKind::Other, anyhow!("url illegality"));
         return ptr::null_mut();
     }
 
-    let rb = (*client).delete(r_value);
+    let rb = (*handle).delete(r_value);
     Box::into_raw(Box::new(rb))
 }
 
@@ -970,11 +1057,14 @@ pub unsafe extern "C" fn client_delete(
 /// This method fails whenever supplied `Url` cannot be parsed.
 #[no_mangle]
 pub unsafe extern "C" fn client_head(
-    client: *mut Client,
+    handle: *mut Client,
     url: *const c_char,
 ) -> *mut RequestBuilder {
-    if client.is_null() {
-        update_last_error(anyhow!("client is null when use put"));
+    if handle.is_null() {
+        update_last_error(
+            HttpErrorKind::HttpHandleNull,
+            anyhow!("client handle is null when use put"),
+        );
         return ptr::null_mut();
     }
 
@@ -984,12 +1074,13 @@ pub unsafe extern "C" fn client_head(
             return ptr::null_mut();
         }
     };
+
     if Url::parse(r_value).is_err() {
-        update_last_error(anyhow!("url illegality"));
+        update_last_error(HttpErrorKind::Other, anyhow!("url illegality"));
         return ptr::null_mut();
     }
 
-    let rb = (*client).head(r_value);
+    let rb = (*handle).head(r_value);
     Box::into_raw(Box::new(rb))
 }
 
@@ -1003,12 +1094,15 @@ pub unsafe extern "C" fn client_head(
 /// This method fails whenever supplied `Url` cannot be parsed.
 #[no_mangle]
 pub unsafe extern "C" fn client_request(
-    client: *mut Client,
+    handle: *mut Client,
     method: *const c_char,
     url: *const c_char,
 ) -> *mut RequestBuilder {
-    if client.is_null() {
-        update_last_error(anyhow!("client is null when use request"));
+    if handle.is_null() {
+        update_last_error(
+            HttpErrorKind::HttpHandleNull,
+            anyhow!("client handle is null when use request"),
+        );
         return ptr::null_mut();
     }
 
@@ -1018,8 +1112,9 @@ pub unsafe extern "C" fn client_request(
             return ptr::null_mut();
         }
     };
+
     if Url::parse(r_value).is_err() {
-        update_last_error(anyhow!("url illegality"));
+        update_last_error(HttpErrorKind::Other, anyhow!("url illegality"));
         return ptr::null_mut();
     }
 
@@ -1029,15 +1124,16 @@ pub unsafe extern "C" fn client_request(
             return ptr::null_mut();
         }
     };
+
     let r_method = match Method::from_bytes(method_str.as_bytes()) {
         Ok(v) => v,
         Err(e) => {
-            update_last_error(Error::new(e));
+            update_last_error(HttpErrorKind::Other, Error::new(e));
             return ptr::null_mut();
         }
     };
 
-    let rb = (*client).request(r_method, r_value);
+    let rb = (*handle).request(r_method, r_value);
     Box::into_raw(Box::new(rb))
 }
 
@@ -1055,22 +1151,32 @@ pub unsafe extern "C" fn client_request(
 /// or redirect limit was exhausted.
 #[no_mangle]
 pub unsafe extern "C" fn client_execute(
-    client: *mut Client,
+    handle: *mut Client,
     request: *mut Request,
 ) -> *mut reqwest::blocking::Response {
-    if client.is_null() || request.is_null() {
-        update_last_error(anyhow!("client or request is null when use request"));
+    if handle.is_null() || request.is_null() {
+        update_last_error(
+            HttpErrorKind::Other,
+            anyhow!("client handle or request is null when use request"),
+        );
         return ptr::null_mut();
     }
 
-    let result = (*client).execute(*Box::from_raw(request));
-    match result {
+    let client = unsafe { Box::from_raw(handle) };
+
+    let req = Box::from_raw(request);
+    let result = client.execute(*req);
+    let resp = match result {
         Ok(v) => Box::into_raw(Box::new(v)),
         Err(err) => {
-            update_last_error(Error::new(err));
+            update_last_error(HttpErrorKind::Other, Error::new(err));
             ptr::null_mut()
         }
-    }
+    };
+
+    Box::leak(client);
+
+    resp
 }
 
 #[cfg(test)]

@@ -48,6 +48,8 @@ class HttpException
 
     ~HttpException();
 
+    [[nodiscard]] std::string Chars() const;
+
     [[nodiscard]] const char *CharsNonNul() const;
 
     [[nodiscard]] uint64_t Length() const;

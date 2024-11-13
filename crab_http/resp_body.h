@@ -45,6 +45,8 @@ class ResponseBody
 
     ~ResponseBody();
 
+    [[nodiscard]] std::string Chars() const;
+
     [[nodiscard]] const char *CharsNonNul() const;
 
     [[nodiscard]] const uint8_t *Bytes() const;

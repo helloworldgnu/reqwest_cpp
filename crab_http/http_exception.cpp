@@ -29,6 +29,14 @@ HttpException::uptr HttpException::Build(void *handle)
     return Create(handle);
 }
 
+std::string HttpException::Chars() const
+{
+    if (handle_) {
+        return {CharsNonNul(), Length()};
+    }
+    return {};
+}
+
 const char *HttpException::CharsNonNul() const
 {
     const auto buf = http_err_msg(handle_);
@@ -40,7 +48,6 @@ uint64_t HttpException::Length() const
     auto len = http_err_msg_len(handle_);
     return len;
 }
-
 HttpErrorKind HttpException::ErrorKind() const
 {
     auto kind = http_err_kind(handle_);

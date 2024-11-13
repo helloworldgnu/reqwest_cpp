@@ -19,6 +19,14 @@ ResponseBody::uptr ResponseBody::Build(void *handle)
     return Create(handle);
 }
 
+std::string ResponseBody::Chars() const
+{
+    if (handle_) {
+        return {CharsNonNul(), Length()};
+    }
+    return {};
+}
+
 const char *ResponseBody::CharsNonNul() const
 {
     const auto buf = resp_body_content(handle_);

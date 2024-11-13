@@ -19,6 +19,14 @@ RString::uptr RString::Build(void *handle)
     return Create(handle);
 }
 
+std::string RString::Chars() const
+{
+    if (handle_) {
+        return {CharsNonNul(), Length()};
+    }
+    return {};
+}
+
 const char *RString::CharsNonNul() const
 {
     const auto buf = r_string_bytes(handle_);

@@ -519,8 +519,7 @@ pub unsafe extern "C" fn request_builder_send(
 
             update_last_error(kind, anyhow!(e));
 
-            let resp = response::Response::new(None);
-            Box::into_raw(Box::new(resp))
+            ptr::null_mut()
         }
     }
 }

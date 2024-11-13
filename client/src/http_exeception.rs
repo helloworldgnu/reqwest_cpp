@@ -1,6 +1,6 @@
+use ffi::take_last_error;
 use http_err::HttpErrorKind;
 use std::ptr;
-use ffi::take_last_error;
 
 pub struct HttpException {
     pub(crate) error_kind: HttpErrorKind,
@@ -24,10 +24,8 @@ impl HttpException {
 #[no_mangle]
 pub extern "C" fn take_last_http_error() -> *mut HttpException {
     match take_last_error() {
-        None => {
-            ptr::null_mut()
-        }
-        Some(v) => { Box::into_raw(v) }
+        None => ptr::null_mut(),
+        Some(v) => Box::into_raw(v),
     }
 }
 

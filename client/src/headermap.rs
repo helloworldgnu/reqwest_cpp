@@ -66,9 +66,7 @@ pub unsafe extern "C" fn header_map_insert(
     let ret = match header_map.insert(r_key, value) {
         Some(_) => true,
         None => {
-            let err = format!("{r_key} insert failed");
-            update_last_error(HttpErrorKind::Other, anyhow!(err));
-            false
+            true
         }
     };
 
@@ -123,11 +121,11 @@ pub unsafe extern "C" fn header_map_append(
     };
 
     let mut header_map = Box::from_raw(handle);
-    let ret = header_map.append(r_key, value);
+    header_map.append(r_key, value);
 
     Box::leak(header_map);
 
-    ret
+    true
 }
 
 /// Removes a key from the map, returning the value associated with the key.

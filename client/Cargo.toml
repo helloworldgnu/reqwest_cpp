@@ -1,5 +1,5 @@
 [package]
-name = "client"
+name = "crab_http"
 version = "1.0.3"
 authors = ["zhangdaoqiang <zdq@meitu.com>"]
 description = "T"

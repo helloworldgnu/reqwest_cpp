@@ -37,21 +37,8 @@ set(CLIENT_LIB_DIR ${CMAKE_BINARY_DIR}/client)
 
 set(SOURCE main.cpp
         main_window.cpp main_window.hpp
-        base/net/http/client.cpp
-        base/net/http/client_builder.cpp
-        base/net/http/header_map.cpp
-        base/net/http/http_exeception.cpp
-        base/net/http/pair.cpp
-        base/net/http/proxy.cpp
-        base/net/http/request_builder.cpp
-        base/net/http/response.cpp
-
-        base/util/byte_buffer.cpp
-        base/util/base64.cpp
-        base/util/md5.cpp
-        base/util/url.cpp
+        ${LIB_HEADERS}
 )
-
 add_executable(gui ${SOURCE})
 add_dependencies(gui client)
 
@@ -59,14 +46,15 @@ target_link_libraries(gui
         Qt${QT_VERSION_MAJOR}::Core
         Qt${QT_VERSION_MAJOR}::Gui
         Qt${QT_VERSION_MAJOR}::Widgets
+        crab_http::crab_http
 )
 
 if (WIN32)
-    target_link_libraries(gui ${CLIENT_LIB_DIR}/client.dll.lib ${CLIENT_LIB_DIR}/code_shadow.dll.lib)
+    target_link_libraries(gui ${CLIENT_LIB_DIR}/crab_http.dll.lib)
 elseif (APPLE)
-    target_link_libraries(gui ${CLIENT_LIB_DIR}/libclient.dylib ${CLIENT_LIB_DIR}/code_shadow.dylib)
+    target_link_libraries(gui ${CLIENT_LIB_DIR}/libcrab_http.dylib)
 else ()
-    target_link_libraries(gui ${CLIENT_LIB_DIR}/libclient.so)
+    target_link_libraries(gui ${CLIENT_LIB_DIR}/libcrab_http.so)
 endif ()
 
 # 生成so库

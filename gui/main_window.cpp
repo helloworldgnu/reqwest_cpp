@@ -5,24 +5,21 @@
 #include <ostream>
 #include <vector>
 
-#include "base/net/http/client.h"
-#include "base/net/http/client_builder.h"
-#include "base/net/http/header_map.h"
-#include "base/net/http/request_builder.h"
-#include "base/net/http/response.h"
+#include "crab_http.h"
 
-base::net::http::Client::uptr clinet = nullptr;
+using namespace crab::http;
+Client::uptr client = nullptr;
 
 void MainWindow::test_full()
 {
-    auto headerMap = base::net::http::HeaderMap::Build();
+    auto headerMap = HeaderMap::Build();
     headerMap->insert("default", "value");
-    if (!clinet)
+    if (!client)
     {
-        auto client_builder = base::net::http::ClientBuilder::Build();
+        auto client_builder = ClientBuilder::Build();
         if (client_builder)
         {
-            clinet = client_builder->user_agent("Rust/1.0.0")
+            client = client_builder->user_agent("Rust/1.0.0")
                          ->default_headers(std::move(headerMap))
                          //                     ->default_headers({{"de", "he"}})
                          ->redirect(10)
@@ -32,10 +29,10 @@ void MainWindow::test_full()
         }
     }
 
-    auto request_builder = clinet->get("http://192.168.1.29:8023/c9/xx");
+    auto request_builder = client->get("http://192.168.1.29:8023/c9/xx");
     if (request_builder)
     {
-        base::net::http::Response::uptr resp =
+        Response::uptr resp =
             //                                          ->basic_auth("admin", "password")
             request_builder
                 ->header("Test1", "abv")
@@ -60,14 +57,14 @@ void MainWindow::test_download()
     //  auto *kind = new uint32_t(0);
     //  auto *value = new int32_t(0);
     //  try {
-    //    if (!clinet) {
-    //      clinet = ffi::ClientBuilder::New()
+    //    if (!client) {
+    //      client = ffi::ClientBuilder::New()
     //                   ->user_agent("Rust/1.0.0")
     //                   ->build();
     //    }
     //
     //    ffi::Response *resp =
-    //        clinet
+    //        client
     //            ->get("https://github.com/Eugeny/tabby/releases/download/v1.0.210/"
     //                  "tabby-1.0.210-macos-arm64.dmg")
     //            ->send(kind, value);

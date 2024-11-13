@@ -33,7 +33,11 @@ pub extern "C" fn resp_body_content_len(handle: *mut RespBody) -> u64 {
         return 0;
     }
 
-    unsafe { (*handle).inner.len() as u64 }
+    let body = unsafe { Box::from_raw(handle) };
+    let ret = body.inner.len();
+    Box::leak(body);
+
+    ret as u64
 }
 
 #[no_mangle]
@@ -46,5 +50,9 @@ pub extern "C" fn resp_body_content(handle: *mut RespBody) -> *const u8 {
         return std::ptr::null();
     }
 
-    unsafe { (*handle).inner.as_ptr() }
+    let body = unsafe { Box::from_raw(handle) };
+    let ret = body.inner.as_ptr();
+    Box::leak(body);
+
+    ret
 }

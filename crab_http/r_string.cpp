@@ -21,7 +21,7 @@ RString::uptr RString::Build(void *handle)
 
 std::string RString::Chars() const
 {
-    if (handle_) {
+    if (CharsNonNul()) {
         return {CharsNonNul(), Length()};
     }
     return {};

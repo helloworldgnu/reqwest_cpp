@@ -65,9 +65,7 @@ pub unsafe extern "C" fn header_map_insert(
     let mut header_map = Box::from_raw(handle);
     let ret = match header_map.insert(r_key, value) {
         Some(_) => true,
-        None => {
-            true
-        }
+        None => true,
     };
 
     Box::leak(header_map);

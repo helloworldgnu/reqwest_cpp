@@ -21,7 +21,7 @@ ResponseBody::uptr ResponseBody::Build(void *handle)
 
 std::string ResponseBody::Chars() const
 {
-    if (handle_) {
+    if (CharsNonNul()) {
         return {CharsNonNul(), Length()};
     }
     return {};

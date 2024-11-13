@@ -1,4 +1,4 @@
-project(crab_http)
+project(crab_http_cpp)
 
 set(SOURCES
         client.cpp
@@ -28,7 +28,7 @@ set(HEADERS
         response.h
 )
 
-add_library(crab_http STATIC ${SOURCES} ${HEADERS})
-add_library(crab_http::crab_http ALIAS crab_http)
+add_library(crab_http_cpp STATIC ${SOURCES} ${HEADERS})
+add_library(crab_http_cpp::crab_http_cpp ALIAS crab_http_cpp)
 
-target_include_directories(crab_http PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_include_directories(crab_http_cpp PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})

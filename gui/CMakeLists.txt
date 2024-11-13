@@ -46,7 +46,7 @@ target_link_libraries(gui
         Qt${QT_VERSION_MAJOR}::Core
         Qt${QT_VERSION_MAJOR}::Gui
         Qt${QT_VERSION_MAJOR}::Widgets
-        crab_http::crab_http
+        crab_http_cpp::crab_http_cpp
 )
 
 if (WIN32)

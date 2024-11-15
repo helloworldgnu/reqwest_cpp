@@ -1,7 +1,9 @@
 use chrono::Local;
 use fern;
+use http_err::HttpErrorKind;
 use log::LevelFilter;
 use reqwest;
+use std::io::ErrorKind;
 use std::{error::Error, sync::Once};
 
 /// Initialize the global logger and log to `rest_client.log`.
@@ -31,130 +33,128 @@ pub extern "C" fn initialize_logging() {
     });
 }
 
-// Log an error and each successive thing which caused it.
-//pub fn backtrace(e : &Error) {
-//    error!("Error: {}", e);
-//
-//    for cause in e.iter().skip(1) {
-//        warn!("\tCaused By: {}",cause );
-//    }
-//}
-
-pub(crate) unsafe fn parse_err(err: &reqwest::Error, kind: *mut u32, value: *mut i32) {
-    /*
-    pub(crate) enum Kind {
-        None,
-        Unknown,
-        TimeOut,
-        Builder,
-        Request,
-        Redirect,
-        Status(StatusCode),
-        Body,
-        Decode,
-        Upgrade,
-    }
-    */
-
+pub(crate) unsafe fn parse_err(err: &reqwest::Error, kind: &mut HttpErrorKind) {
     if err.is_timeout() {
-        *kind = 1002;
+        *kind = HttpErrorKind::HttpTimeout;
     } else if err.is_status() {
-        *kind = 1006;
-        let v = match err.status() {
-            Some(code) => code.as_u16() as i32,
-            None => 0,
-        };
-
-        if !value.is_null() {
-            *value = v;
-        }
+        *kind = HttpErrorKind::HttpStatus;
     } else if err.is_builder() {
-        *kind = 1003;
+        *kind = HttpErrorKind::HttpBuilder;
     } else if err.is_request() {
-        *kind = 1004;
+        *kind = HttpErrorKind::HttpRequest;
     } else if err.is_redirect() {
-        *kind = 1005;
+        *kind = HttpErrorKind::HttpRedirect;
     } else if err.is_body() {
-        *kind = 1007;
+        *kind = HttpErrorKind::HttpBody;
     } else if err.is_decode() {
-        *kind = 1008;
+        *kind = HttpErrorKind::HttpDecode;
     } else {
-        *kind = 1001;
+        *kind = HttpErrorKind::Other;
+
+        let mut source = err.source();
+        while let Some(e) = source {
+            if let Some(io) = e.downcast_ref::<std::io::Error>() {
+                parse_io_err(io, kind);
+            }
+
+            source = e.source();
+        }
     }
 }
 
-pub(crate) unsafe fn parse_read_err(err: &std::io::Error, kind: *mut u32) {
-    use std::io::ErrorKind;
-
-    let mut kk = 0u32;
-
+pub(crate) unsafe fn parse_io_err(err: &std::io::Error, kind: &mut HttpErrorKind) {
     match err.kind() {
-        ErrorKind::TimedOut => {
-            kk = 2002;
+        ErrorKind::NotFound => {
+            *kind = HttpErrorKind::NotFound;
+        }
+        ErrorKind::PermissionDenied => {
+            *kind = HttpErrorKind::PermissionDenied;
         }
         ErrorKind::ConnectionRefused => {
-            kk = 2003;
+            *kind = HttpErrorKind::ConnectionRefused;
         }
         ErrorKind::ConnectionReset => {
-            kk = 2004;
+            *kind = HttpErrorKind::ConnectionReset;
         }
+        /*
+        ErrorKind::HostUnreachable => { *kind = HttpErrorKind::HostUnreachable; }
+        ErrorKind::NetworkUnreachable => { *kind = HttpErrorKind::NetworkUnreachable; }
+        */
         ErrorKind::ConnectionAborted => {
-            kk = 2005;
+            *kind = HttpErrorKind::ConnectionAborted;
         }
+        ErrorKind::NotConnected => {
+            *kind = HttpErrorKind::NotConnected;
+        }
+        ErrorKind::AddrInUse => {
+            *kind = HttpErrorKind::AddrInUse;
+        }
+        ErrorKind::AddrNotAvailable => {
+            *kind = HttpErrorKind::AddrNotAvailable;
+        }
+        /*
+        ErrorKind::NetworkDown => { *kind = HttpErrorKind::NetworkDown; }
+        */
+        ErrorKind::BrokenPipe => {
+            *kind = HttpErrorKind::BrokenPipe;
+        }
+        ErrorKind::AlreadyExists => {
+            *kind = HttpErrorKind::AlreadyExists;
+        }
+        ErrorKind::WouldBlock => {
+            *kind = HttpErrorKind::WouldBlock;
+        }
+        /*
+        ErrorKind::NotADirectory => { *kind = HttpErrorKind::NotADirectory; }
+        ErrorKind::IsADirectory => { *kind = HttpErrorKind::IsADirectory; }
+        ErrorKind::DirectoryNotEmpty => { *kind = HttpErrorKind::DirectoryNotEmpty; }
+        ErrorKind::ReadOnlyFilesystem => { *kind = HttpErrorKind::ReadOnlyFilesystem; }
+        ErrorKind::FilesystemLoop => { *kind = HttpErrorKind::FilesystemLoop; }
+        ErrorKind::StaleNetworkFileHandle => { *kind = HttpErrorKind::StaleNetworkFileHandle; }
+        */
+        ErrorKind::InvalidInput => {
+            *kind = HttpErrorKind::InvalidInput;
+        }
+        ErrorKind::InvalidData => {
+            *kind = HttpErrorKind::InvalidData;
+        }
+        ErrorKind::TimedOut => {
+            *kind = HttpErrorKind::TimedOut;
+        }
+        ErrorKind::WriteZero => {
+            *kind = HttpErrorKind::WriteZero;
+        }
+        /*
+        ErrorKind::StorageFull => { *kind = HttpErrorKind::StorageFull; }
+        ErrorKind::NotSeekable => { *kind = HttpErrorKind::NotSeekable; }
+        ErrorKind::FilesystemQuotaExceeded => { *kind = HttpErrorKind::FilesystemQuotaExceeded; }
+        ErrorKind::FileTooLarge => { *kind = HttpErrorKind::FileTooLarge; }
+        ErrorKind::ResourceBusy => { *kind = HttpErrorKind::ResourceBusy; }
+        ErrorKind::ExecutableFileBusy => { *kind = HttpErrorKind::ExecutableFileBusy; }
+        ErrorKind::Deadlock => { *kind = HttpErrorKind::Deadlock; }
+        ErrorKind::CrossesDevices => { *kind = HttpErrorKind::CrossesDevices; }
+        ErrorKind::TooManyLinks => { *kind = HttpErrorKind::TooManyLinks; }
+        ErrorKind::InvalidFilename => { *kind = HttpErrorKind::InvalidFilename; }
+        ErrorKind::ArgumentListTooLong => { *kind = HttpErrorKind::ArgumentListTooLong; }
+         */
         ErrorKind::Interrupted => {
-            kk = 2006;
+            *kind = HttpErrorKind::Interrupted;
+        }
+        ErrorKind::Unsupported => {
+            *kind = HttpErrorKind::Unsupported;
         }
         ErrorKind::UnexpectedEof => {
-            kk = 2007;
+            *kind = HttpErrorKind::UnexpectedEof;
         }
+        ErrorKind::OutOfMemory => {
+            *kind = HttpErrorKind::OutOfMemory;
+        }
+        ErrorKind::Other => {
+            *kind = HttpErrorKind::Other;
+        }
+        /*
+        ErrorKind::Uncategorized => { *kind = HttpErrorKind::Uncategorized; }
+         */
         _ => {}
-    }
-
-    if kk != 0u32 {
-        *kind = kk;
-        return;
-    }
-
-    let mut source = err.source();
-    while let Some(e) = source {
-        kk = 0u32;
-        if let Some(io) = e.downcast_ref::<reqwest::Error>() {
-            parse_err(&io, &mut kk as *mut u32, std::ptr::null_mut());
-            if kk != 0u32 {
-                *kind = kk;
-                return;
-            }
-        }
-
-        if let Some(io) = e.downcast_ref::<std::io::Error>() {
-            match io.kind() {
-                ErrorKind::TimedOut => {
-                    kk = 2002;
-                }
-                ErrorKind::ConnectionRefused => {
-                    kk = 2003;
-                }
-                ErrorKind::ConnectionReset => {
-                    kk = 2004;
-                }
-                ErrorKind::ConnectionAborted => {
-                    kk = 2005;
-                }
-                ErrorKind::Interrupted => {
-                    kk = 2006;
-                }
-                ErrorKind::UnexpectedEof => {
-                    kk = 2007;
-                }
-                _ => {}
-            }
-
-            if kk != 0u32 {
-                *kind = kk;
-                return;
-            }
-        }
-
-        source = e.source();
     }
 }

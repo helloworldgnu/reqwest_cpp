@@ -37,11 +37,8 @@ set(CLIENT_LIB_DIR ${CMAKE_BINARY_DIR}/client)
 
 set(SOURCE main.cpp
         main_window.cpp main_window.hpp
-        wrappers.cpp wrappers.hpp
-        client.hpp
-        response_content.cpp
+        ${LIB_HEADERS}
 )
-
 add_executable(gui ${SOURCE})
 add_dependencies(gui client)
 
@@ -49,17 +46,16 @@ target_link_libraries(gui
         Qt${QT_VERSION_MAJOR}::Core
         Qt${QT_VERSION_MAJOR}::Gui
         Qt${QT_VERSION_MAJOR}::Widgets
+        crab_http_cpp::crab_http_cpp
 )
 
 if (WIN32)
-    target_link_libraries(gui ${CLIENT_LIB_DIR}/client.dll.lib)
+    target_link_libraries(gui ${CLIENT_LIB_DIR}/crab_http.dll.lib)
 elseif (APPLE)
-    target_link_libraries(gui ${CLIENT_LIB_DIR}/libclient.dylib)
+    target_link_libraries(gui ${CLIENT_LIB_DIR}/libcrab_http.dylib)
 else ()
-    target_link_libraries(gui ${CLIENT_LIB_DIR}/libclient.so)
+    target_link_libraries(gui ${CLIENT_LIB_DIR}/libcrab_http.so)
 endif ()
-
-
 
 # 生成so库
 #set(SRC wrappers.cpp wrappers.hpp ffi.hpp)

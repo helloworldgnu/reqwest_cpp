@@ -13,7 +13,7 @@ fn main() {
 
     let package_name = env::var("CARGO_PKG_NAME").unwrap();
     let output_file = target_dir()
-        .join(format!("{}.hpp", package_name))
+        .join(format!("{}_c.h", package_name))
         .display()
         .to_string();
 
@@ -28,8 +28,8 @@ fn main() {
         ..Default::default()
     };
     let mut config = Config::default();
-    config.namespace = Some(String::from("ffi"));
-    config.includes = vec![String::from("ffi.hpp")];
+    config.namespace = Some(String::from("crab::http"));
+    // config.includes = vec![String::from("ffi.hpp")];
     config.pragma_once = true;
     config.cpp_compat = true;
     config.sort_by = Name;

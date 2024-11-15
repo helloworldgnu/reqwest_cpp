@@ -93,14 +93,16 @@ std::unique_ptr<RequestBuilder> Client::request(const std::string &method, const
 
 std::unique_ptr<Response> Client::execute(std::unique_ptr<Request> request)
 {
+    if (!handle_ || !request->Handle()) {
+        return nullptr;
+    }
+
     auto resp = client_execute(handle_, request->Handle());
+    request->ResetHandle();
     if (!resp)
     {
         return nullptr;
     }
-
-    request->ResetHandle();
-    handle_ = nullptr;
 
     return Response::Build(resp);
 }

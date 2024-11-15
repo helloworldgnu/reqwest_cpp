@@ -1156,7 +1156,7 @@ pub unsafe extern "C" fn client_execute(
 ) -> *mut reqwest::blocking::Response {
     if handle.is_null() || request.is_null() {
         update_last_error(
-            HttpErrorKind::Other,
+            HttpErrorKind::HttpHandleNull,
             anyhow!("client handle or request is null when use request"),
         );
         return ptr::null_mut();

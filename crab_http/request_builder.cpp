@@ -188,12 +188,17 @@ RequestBuilder *RequestBuilder::query(const std::initializer_list<Pair> &querys)
 
 std::unique_ptr<Response> RequestBuilder::send()
 {
+    if (!handle_) {
+        return nullptr;
+    }
+
     auto resp = request_builder_send(handle_);
+    handle_ = nullptr;
+
     if (!resp)
     {
         return nullptr;
     }
-    handle_ = nullptr;
     return Response::Build(resp);
 }
 
@@ -229,13 +234,19 @@ RequestBuilder *RequestBuilder::version(const std::string &version)
 
 std::unique_ptr<Request> RequestBuilder::build()
 {
+    if (!handle_)
+    {
+        return nullptr;
+    }
+
     auto req = request_builder_build(handle_);
+    handle_ = nullptr;
+
     if (!req)
     {
         return nullptr;
     }
 
-    handle_ = nullptr;
     return Request::Build(req);
 }
 } // namespace crab::http

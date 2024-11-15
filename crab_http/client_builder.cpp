@@ -432,12 +432,17 @@ ClientBuilder *ClientBuilder::user_agent(const std::string &value)
 
 std::unique_ptr<Client> ClientBuilder::build()
 {
+    if (!handle_) {
+        return nullptr;
+    }
+
     auto client = client_builder_build_client(handle_);
+    handle_ = nullptr;
+
     if (!client)
     {
         return nullptr;
     }
-    handle_ = nullptr;
     return Client::Build(client);
 }
 } // namespace crab::http

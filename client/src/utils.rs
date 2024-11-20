@@ -155,6 +155,8 @@ pub(crate) unsafe fn parse_io_err(err: &std::io::Error, kind: &mut HttpErrorKind
         /*
         ErrorKind::Uncategorized => { *kind = HttpErrorKind::Uncategorized; }
          */
-        _ => {}
+        _ => {
+            *kind = HttpErrorKind::Other;
+        }
     }
 }

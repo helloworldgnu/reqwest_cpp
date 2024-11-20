@@ -28,6 +28,8 @@ set(HEADERS
         response.h
 )
 
+set(CMAKE_OSX_ARCHITECTURES "arm64;x86_64")
+
 add_library(crab_http_cpp STATIC ${SOURCES} ${HEADERS})
 add_library(crab_http_cpp::crab_http_cpp ALIAS crab_http_cpp)
 

@@ -20,7 +20,7 @@ void MainWindow::test_full()
         if (client_builder)
         {
             client = client_builder->user_agent("Rust/1.0.0")
-                         ->default_headers(std::move(headerMap))
+//                         ->default_headers(std::move(headerMap))
                          //                     ->default_headers({{"de", "he"}})
                          ->redirect(10)
                          //->proxy(ffi::proxy::http("http://192.168.1.37:8888"))
@@ -29,16 +29,16 @@ void MainWindow::test_full()
         }
     }
 
-    auto request_builder = client->get("http://192.168.1.29:8023/c9/xx");
+    auto request_builder = client->get("http://baidu.com");
     if (request_builder)
     {
         Response::uptr resp =
             //                                          ->basic_auth("admin", "password")
             request_builder
-                ->header("Test1", "abv")
+//                ->header("Test1", "abv")
                 //                                          ->header("Test2", "abv")
                 //                                          ->query({{"3", "4"}, {"5", "6"}})
-                ->body("123456")
+//                ->body("123456")
                 //                             ->json({{"name","markrenChina"}})
                 //                             ->json("{\"test\":123}")
                 //->file_body("rest_client.log")
@@ -46,9 +46,10 @@ void MainWindow::test_full()
                 ->send();
 
         auto headermap2 = resp->headers();
-        std::cout << headermap2->get("content-type") << std::endl;
-        std::cout << headermap2->keys() << std::endl;
-        std::cout << headermap2->values() << std::endl;
+        std::cout<<"status: "<<resp->status()<<std::endl;
+        std::cout << headermap2->get("content-type")->Chars() << std::endl;
+        std::cout << headermap2->keys()->Chars() << std::endl;
+        std::cout << headermap2->values()->Chars() << std::endl;
     }
 }
 

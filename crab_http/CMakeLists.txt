@@ -1,4 +1,10 @@
+cmake_minimum_required(VERSION 3.20)
+
 project(crab_http_cpp)
+set(CMAKE_CXX_STANDARD 17)
+
+# 根据构建类型添加后缀
+set(CMAKE_DEBUG_POSTFIX "d")
 
 set(SOURCES
         client.cpp

@@ -19,7 +19,7 @@ strum = { version = "0.26.3", features = ["derive"] }
 strum_macros = "0.26.4"
 
 [lib]
-crate-type = ["cdylib", "staticlib"]
+crate-type = ["cdylib"]
 
 [build-dependencies]
 cbindgen = "0.27.0"

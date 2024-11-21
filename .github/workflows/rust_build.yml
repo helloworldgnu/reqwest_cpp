@@ -60,14 +60,14 @@ jobs:
           lipo -create -output target/output/lib${{ env.LIBRARY_NAME }}_debug.dylib \
             target/output/${{ env.LIBRARY_NAME }}_debug_x86_64.dylib \
             target/output/${{ env.LIBRARY_NAME }}_debug_aarch64.dylib
-          install_name_tool -id @rpath/lib${{ env.LIBRARY_NAME }}.dylib lib${{ env.LIBRARY_NAME }}_debug.dylib
+          install_name_tool -id @rpath/lib${{ env.LIBRARY_NAME }}.dylib target/output/lib${{ env.LIBRARY_NAME }}_debug.dylib
 
       - name: Combine Release with lipo
         run: |
           lipo -create -output target/output/lib${{ env.LIBRARY_NAME }}_release.dylib \
             target/output/${{ env.LIBRARY_NAME }}_release_x86_64.dylib \
             target/output/${{ env.LIBRARY_NAME }}_release_aarch64.dylib
-          install_name_tool -id @rpath/lib${{ env.LIBRARY_NAME }}.dylib lib${{ env.LIBRARY_NAME }}_release.dylib
+          install_name_tool -id @rpath/lib${{ env.LIBRARY_NAME }}.dylib target/output/lib${{ env.LIBRARY_NAME }}_release.dylib
 
       # - name: Upload macOS libraries
       #   uses: actions/upload-artifact@v4

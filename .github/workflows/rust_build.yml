@@ -1,0 +1,157 @@
+name: Rust build
+
+on:
+  push:
+    branches: [ "main", "feature/**", "bugfix/**" ]
+    tags: ["*"]
+    paths-ignore:
+      - "README.md"
+      - "LICENSE"
+  pull_request:
+    branches: [ "main", "feature/**", "bugfix/**" ]
+    paths-ignore:
+      - "README.md"
+      - "LICENSE"
+
+env:
+  CARGO_TERM_COLOR: always
+  LIBRARY_NAME: crab_http  # 定义动态库的名称
+
+jobs:
+  build-mac:
+    runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: ./client
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Install Rust arm and x86 toolchain
+        run: |
+          rustup update stable
+          rustup target add x86_64-apple-darwin aarch64-apple-darwin
+
+      - name: Build for x86_64 (Debug)
+        run: |
+          cargo build --target x86_64-apple-darwin
+          mkdir -p target/output
+          cp target/x86_64-apple-darwin/debug/*.dylib target/output/${{ env.LIBRARY_NAME }}_debug_x86_64.dylib
+
+      - name: Build for x86_64 (Release)
+        run: |
+          cargo build --release --target x86_64-apple-darwin
+          mkdir -p target/output
+          cp target/x86_64-apple-darwin/release/*.dylib target/output/${{ env.LIBRARY_NAME }}_release_x86_64.dylib
+
+      - name: Build for aarch64 (Debug)
+        run: |
+          cargo build --target aarch64-apple-darwin
+          cp target/aarch64-apple-darwin/debug/*.dylib target/output/${{ env.LIBRARY_NAME }}_debug_aarch64.dylib
+
+      - name: Build for aarch64 (Release)
+        run: |
+          cargo build --release --target aarch64-apple-darwin
+          cp target/aarch64-apple-darwin/release/*.dylib target/output/${{ env.LIBRARY_NAME }}_release_aarch64.dylib
+
+      - name: Combine Debug with lipo
+        run: |
+          lipo -create -output target/output/lib${{ env.LIBRARY_NAME }}_debug.dylib \
+            target/output/${{ env.LIBRARY_NAME }}_debug_x86_64.dylib \
+            target/output/${{ env.LIBRARY_NAME }}_debug_aarch64.dylib
+
+      - name: Combine Release with lipo
+        run: |
+          lipo -create -output target/output/lib${{ env.LIBRARY_NAME }}_release.dylib \
+            target/output/${{ env.LIBRARY_NAME }}_release_x86_64.dylib \
+            target/output/${{ env.LIBRARY_NAME }}_release_aarch64.dylib
+
+      # - name: Upload macOS libraries
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: macOS-libraries
+      #     path: |
+      #       client/target/output/lib${{ env.LIBRARY_NAME }}_debug.dylib
+      #       client/target/output/lib${{ env.LIBRARY_NAME }}_release.dylib
+
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.event.ref, 'refs/tags/')
+        with:
+          files: |
+            client/target/output/*_debug.dylib
+            client/target/output/*_release.dylib
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+  build-windows:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: ./client
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Install Rust 1.77
+        run: rustup install 1.77
+
+      - name: Use Rust 1.77
+        run: rustup override set 1.77
+
+      - name: Build Debug Library
+        run: cargo build
+
+      - name: Build Release Library
+        run: cargo build --release
+
+      - name: Rename Debug libraries
+        run: |
+          Get-ChildItem -Path target/debug -File | ForEach-Object {
+              if ($_.Name -like "*.dll.lib") {
+                  # 对于 .dll.lib 文件
+                  $newName = "$($_.BaseName -replace '\.dll$', 'd.dll')$($_.Extension)"
+              } elseif ($_.Extension -eq ".dll" -or $_.Extension -eq ".lib" -or $_.Extension -eq ".pdb") {
+                  # 对于 .dll 或 .lib 文件
+                  $newName = "$($_.BaseName)d$($_.Extension)"
+              } else {
+                  return
+              }
+
+              $targetPath = Join-Path -Path $_.DirectoryName -ChildPath $newName
+
+              if (Test-Path -Path $targetPath) {
+                  Write-Host "File already exists: $targetPath. Skipping..."
+              } else {
+                  Rename-Item -Path $_.FullName -NewName $targetPath
+                  Write-Host "Renamed: $($_.FullName) -> $targetPath"
+              }
+          }
+        shell: pwsh
+
+      # - name: Upload Windows libraries
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: Windows-libraries
+      #     path: |
+      #       client/target/debug/*.dll
+      #       client/target/debug/*.dll.lib
+      #       client/target/debug/*.pdb
+      #       client/target/release/*.dll
+      #       client/target/release/*.dll.lib
+      #       client/target/release/*.pdb
+
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.event.ref, 'refs/tags/')
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          files: |
+            client/target/debug/*.dll
+            client/target/debug/*.lib
+            client/target/debug/*.pdb
+            client/target/release/*.dll
+            client/target/release/*.lib
+            client/target/release/*.pdb
+          

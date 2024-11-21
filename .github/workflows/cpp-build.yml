@@ -1,0 +1,74 @@
+name: Cpp build
+
+on:
+  push:
+    branches: [ "main", "feature/**", "bugfix/**" ]
+    tags: ["*"]
+    paths-ignore:
+      - "README.md"
+      - "LICENSE"
+  pull_request:
+    branches: [ "main", "feature/**", "bugfix/**" ]
+    paths-ignore:
+      - "README.md"
+      - "LICENSE"
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: ./crab_http
+
+    strategy:
+      # Set fail-fast to false to ensure that feedback is delivered for all matrix combinations. Consider changing this to true when your workflow is stable.
+      fail-fast: false
+
+      matrix:
+        os: [macos-latest, windows-latest]
+        build_type: [Debug, Release]
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set reusable strings
+      # Turn repeated input strings (such as the build output directory) into step outputs. These step outputs can be used throughout the workflow file.
+      id: strings
+      shell: bash
+      run: |
+        echo "build-output-dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"
+
+    - name: Configure CMake
+      run: >
+        cmake -B ${{ steps.strings.outputs.build-output-dir }} -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+
+    - name: Build
+      run: cmake --build ${{ steps.strings.outputs.build-output-dir }} --config ${{ matrix.build_type }}
+    
+    # - name: Upload macOS artifacts
+    #   if: matrix.os == 'macos-latest'
+    #   uses: actions/upload-artifact@v4
+    #   with:
+    #     name: macos-libraries
+    #     path: ${{ steps.strings.outputs.build-output-dir }}/*.a
+
+    # - name: Upload Windows artifacts
+    #   if: matrix.os == 'windows-latest'
+    #   uses: actions/upload-artifact@v4
+    #   with:
+    #     name: windows-libraries
+    #     path: ${{ steps.strings.outputs.build-output-dir }}/${{ matrix.build_type }}/*.lib
+
+    - name: Release Windows
+      uses: softprops/action-gh-release@v2
+      if: startsWith(github.event.ref, 'refs/tags/') && matrix.os == 'windows-latest'
+      with:
+        files: ${{ steps.strings.outputs.build-output-dir }}/${{ matrix.build_type }}/*.lib
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Release
+      uses: softprops/action-gh-release@v2
+      if: startsWith(github.event.ref, 'refs/tags/') && matrix.os == 'macos-latest'
+      with:
+        files: ${{ steps.strings.outputs.build-output-dir }}/*.a
+        token: ${{ secrets.GITHUB_TOKEN }}

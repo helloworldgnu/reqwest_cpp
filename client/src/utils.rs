@@ -5,6 +5,29 @@ use log::LevelFilter;
 use reqwest;
 use std::io::ErrorKind;
 use std::{error::Error, sync::Once};
+use std::path::Path;
+
+pub fn extract_file_name<P: AsRef<Path>>(p: P) -> String {
+    let path = p.as_ref();
+    match path.file_stem() {
+        Some(s) => s.to_str().unwrap_or("").into(),
+        None => {
+            path.to_str().unwrap_or("").into()
+        }
+    }
+}
+
+#[macro_export] macro_rules! function {
+    () => {{
+        fn f() {}
+        fn type_name_of<T>(_: T) -> &'static str {
+            std::any::type_name::<T>()
+        }
+        type_name_of(f)
+            .rsplit("::")
+            .find(|&part| part != "f" && part != "{{closure}}").unwrap_or("")
+    }};
+}
 
 /// Initialize the global logger and log to `rest_client.log`.
 ///

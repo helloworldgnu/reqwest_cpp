@@ -8,6 +8,7 @@ use reqwest::blocking::{Request, RequestBuilder};
 use reqwest::header::HeaderMap;
 use response;
 use std::{ptr, slice, time::Duration};
+use utils::extract_file_name;
 
 /// Add a `Header` to this Request.
 #[no_mangle]
@@ -516,8 +517,7 @@ pub unsafe extern "C" fn request_builder_send(
         Err(e) => {
             let mut kind = HttpErrorKind::NoError;
             utils::parse_err(&e, &mut kind);
-
-            update_last_error(kind, anyhow!(e));
+            update_last_error(kind, anyhow!("{}#{}:{}, {e}.", extract_file_name(file!()), line!(), e));
 
             ptr::null_mut()
         }

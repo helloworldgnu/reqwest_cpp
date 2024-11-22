@@ -7,6 +7,8 @@ use reqwest::header::HeaderMap;
 use reqwest::{redirect, Method, Url};
 use std::net::{IpAddr, SocketAddr};
 use std::{ptr, slice};
+use function;
+use utils::extract_file_name;
 
 /// Constructs a new `ClientBuilder`.
 #[no_mangle]
@@ -1165,11 +1167,12 @@ pub unsafe extern "C" fn client_execute(
     let client = unsafe { Box::from_raw(handle) };
 
     let req = Box::from_raw(request);
+    let url = req.url().to_string();
     let result = client.execute(*req);
     let resp = match result {
         Ok(v) => Box::into_raw(Box::new(v)),
         Err(err) => {
-            update_last_error(HttpErrorKind::Other, Error::new(err));
+            update_last_error(HttpErrorKind::Other, anyhow!("{}#{}:{}, {:?}, {}", extract_file_name(file!()), function!(), line!(), err, url));
             ptr::null_mut()
         }
     };

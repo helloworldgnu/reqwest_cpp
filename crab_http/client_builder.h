@@ -272,6 +272,14 @@ class ClientBuilder
     /// Sets the `User-Agent` header to be used by this client.
     ClientBuilder *user_agent(const std::string &value);
 
+    ClientBuilder *no_hickory_dns();
+
+    ClientBuilder *hickory_dns(bool enable);
+
+    ClientBuilder *use_rustls();
+
+    ClientBuilder *use_native_tls();
+
     /// Returns a `Client` that uses this `ClientBuilder` configuration.
     ///
     /// # Errors

@@ -317,6 +317,14 @@ void *client_builder_max_tls_version(void *handle, const char *version);
 /// feature to be enabled.
 void *client_builder_min_tls_version(void *handle, const char *version);
 
+void *client_builder_no_hickory_dns(void *handle);
+
+void *client_builder_hickory_dns(void *handle, bool enable);
+
+void *client_builder_use_rustls(void *handle);
+
+void *client_builder_use_native_tls(void *handle);
+
 /// Disables the trust-dns async resolver.
 ///
 /// This method exists even if the optional `trust-dns` feature is not enabled.

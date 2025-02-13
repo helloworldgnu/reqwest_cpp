@@ -917,9 +917,8 @@ pub unsafe extern "C" fn client_builder_build_client(handle: *mut ClientBuilder)
 #[no_mangle]
 pub unsafe extern "C" fn client_builder_use_rustls(
     handle: *mut ClientBuilder,
-    proxy: *mut reqwest::Proxy,
 ) -> *mut ClientBuilder {
-    if handle.is_null() || proxy.is_null() {
+    if handle.is_null() {
         update_last_error(
             HttpErrorKind::HttpHandleNull,
             anyhow!("client_builder handle is null"),
@@ -929,6 +928,23 @@ pub unsafe extern "C" fn client_builder_use_rustls(
 
     let r_client_builder = Box::from_raw(handle);
     let result = r_client_builder.use_rustls_tls();
+    Box::into_raw(Box::new(result))
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn client_builder_use_native_tls(
+    handle: *mut ClientBuilder,
+) -> *mut ClientBuilder {
+    if handle.is_null() {
+        update_last_error(
+            HttpErrorKind::HttpHandleNull,
+            anyhow!("client_builder handle is null"),
+        );
+        return ptr::null_mut();
+    }
+
+    let r_client_builder = Box::from_raw(handle);
+    let result = r_client_builder.use_native_tls();
     Box::into_raw(Box::new(result))
 }
 

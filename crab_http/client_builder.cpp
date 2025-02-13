@@ -430,6 +430,38 @@ ClientBuilder *ClientBuilder::user_agent(const std::string &value)
     return this;
 }
 
+ClientBuilder *ClientBuilder::no_hickory_dns() {
+    auto builder = client_builder_no_hickory_dns(handle_);
+    if (builder) {
+        handle_ = builder;
+    }
+    return this;
+}
+
+ClientBuilder *ClientBuilder::hickory_dns(bool enable) {
+    auto builder = client_builder_hickory_dns(handle_, enable);
+    if (builder) {
+        handle_ = builder;
+    }
+    return this;
+}
+
+ClientBuilder *ClientBuilder::use_rustls() {
+    auto builder = client_builder_use_rustls(handle_);
+    if (builder) {
+        handle_ = builder;
+    }
+    return this;
+}
+
+ClientBuilder *ClientBuilder::use_native_tls() {
+    auto builder = client_builder_use_native_tls(handle_);
+    if (builder) {
+        handle_ = builder;
+    }
+    return this;
+}
+
 std::unique_ptr<Client> ClientBuilder::build()
 {
     if (!handle_) {

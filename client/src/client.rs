@@ -1,5 +1,6 @@
 use crate::ffi::*;
 use anyhow::{anyhow, Error};
+use function;
 use http_err::HttpErrorKind;
 use libc::c_char;
 use reqwest::blocking::{Client, ClientBuilder, Request, RequestBuilder};
@@ -7,7 +8,6 @@ use reqwest::header::HeaderMap;
 use reqwest::{redirect, Method, Url};
 use std::net::{IpAddr, SocketAddr};
 use std::{ptr, slice};
-use function;
 use utils::extract_file_name;
 
 /// Constructs a new `ClientBuilder`.
@@ -717,6 +717,41 @@ pub unsafe extern "C" fn client_builder_no_trust_dns(
     Box::into_raw(Box::new(result))
 }
 
+#[no_mangle]
+pub unsafe extern "C" fn client_builder_no_hickory_dns(
+    handle: *mut ClientBuilder,
+) -> *mut ClientBuilder {
+    if handle.is_null() {
+        update_last_error(
+            HttpErrorKind::HttpHandleNull,
+            anyhow!("client_builder handle is null when use no_hickory_dns"),
+        );
+        return ptr::null_mut();
+    }
+
+    let r_client_builder = Box::from_raw(handle);
+    let result = r_client_builder.no_hickory_dns();
+    Box::into_raw(Box::new(result))
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn client_builder_hickory_dns(
+    handle: *mut ClientBuilder,
+    enable: bool,
+) -> *mut ClientBuilder {
+    if handle.is_null() {
+        update_last_error(
+            HttpErrorKind::HttpHandleNull,
+            anyhow!("client_builder handle is null when use hickory_dns"),
+        );
+        return ptr::null_mut();
+    }
+
+    let r_client_builder = Box::from_raw(handle);
+    let result = r_client_builder.hickory_dns(enable);
+    Box::into_raw(Box::new(result))
+}
+
 /// Restrict the Client to be used with HTTPS only requests.
 ///
 /// Defaults to false.
@@ -877,6 +912,24 @@ pub unsafe extern "C" fn client_builder_build_client(handle: *mut ClientBuilder)
             ptr::null_mut()
         }
     }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn client_builder_use_rustls(
+    handle: *mut ClientBuilder,
+    proxy: *mut reqwest::Proxy,
+) -> *mut ClientBuilder {
+    if handle.is_null() || proxy.is_null() {
+        update_last_error(
+            HttpErrorKind::HttpHandleNull,
+            anyhow!("client_builder handle is null"),
+        );
+        return ptr::null_mut();
+    }
+
+    let r_client_builder = Box::from_raw(handle);
+    let result = r_client_builder.use_rustls_tls();
+    Box::into_raw(Box::new(result))
 }
 
 //It is usually necessary to use
@@ -1172,7 +1225,17 @@ pub unsafe extern "C" fn client_execute(
     let resp = match result {
         Ok(v) => Box::into_raw(Box::new(v)),
         Err(err) => {
-            update_last_error(HttpErrorKind::Other, anyhow!("{}#{}:{}, {:?}, {}", extract_file_name(file!()), function!(), line!(), err, url));
+            update_last_error(
+                HttpErrorKind::Other,
+                anyhow!(
+                    "{}#{}:{}, {:?}, {}",
+                    extract_file_name(file!()),
+                    function!(),
+                    line!(),
+                    err,
+                    url
+                ),
+            );
             ptr::null_mut()
         }
     };

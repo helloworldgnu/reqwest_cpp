@@ -1,6 +1,6 @@
 use crate::ffi::*;
 use anyhow::{anyhow, Error};
-use function;
+use ::{function, response};
 use http_err::HttpErrorKind;
 use libc::c_char;
 use reqwest::blocking::{Client, ClientBuilder, Request, RequestBuilder};
@@ -1224,7 +1224,7 @@ pub unsafe extern "C" fn client_request(
 pub unsafe extern "C" fn client_execute(
     handle: *mut Client,
     request: *mut Request,
-) -> *mut reqwest::blocking::Response {
+) -> *mut response::Response {
     if handle.is_null() || request.is_null() {
         update_last_error(
             HttpErrorKind::HttpHandleNull,
@@ -1239,7 +1239,10 @@ pub unsafe extern "C" fn client_execute(
     let url = req.url().to_string();
     let result = client.execute(*req);
     let resp = match result {
-        Ok(v) => Box::into_raw(Box::new(v)),
+        Ok(v) => {
+            let resp = response::Response::new(Some(v));
+            Box::into_raw(Box::new(resp))
+        },
         Err(err) => {
             update_last_error(
                 HttpErrorKind::Other,
